@@ -163,6 +163,7 @@
                 borderColor: "blue",
                 borderWidth: 2,
                 fill: false,
+                yAxisID: 'y'
               },
               {
                 label: period === '1D' ? '10 MA' : '50 MA',
@@ -170,6 +171,7 @@
                 borderColor: "green",
                 borderWidth: 2,
                 fill: false,
+                yAxisID: 'y'
               },
               {
                 label: period === '1D' ? '20 MA' : '200 MA',
@@ -177,6 +179,7 @@
                 borderColor: "orange",
                 borderWidth: 2,
                 fill: false,
+                yAxisID: 'y'
               },
               {
                 label: "RSI",
@@ -184,6 +187,7 @@
                 borderColor: "purple",
                 borderWidth: 2,
                 fill: false,
+                yAxisID: 'y1'
               },
               {
                 label: "MACD (Linha Principal)",
@@ -191,18 +195,45 @@
                 borderColor: "red",
                 borderWidth: 2,
                 fill: false,
+                yAxisID: 'y'
               },
             ],
           },
           options: {
             responsive: true,
+            interaction: {
+              mode: 'index',
+              intersect: false,
+            },
             scales: {
               x: { 
                 title: { display: true, text: "Data" }
               },
               y: { 
-                title: { display: true, text: "Valor" }
+                type: 'linear',
+                display: true,
+                position: 'left',
+                title: { display: true, text: "Preço" }
               },
+              y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                min: 0,
+                max: 100,
+                grid: {
+                  drawOnChartArea: false,
+                },
+                title: { 
+                  display: true, 
+                  text: "RSI" 
+                },
+                ticks: {
+                  callback: function(value) {
+                    return value + '%';
+                  }
+                }
+              }
             },
             plugins: {
               tooltip: {
