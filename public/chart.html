@@ -5,10 +5,80 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gráfico de Indicadores - {{ticker}}</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .chart-container {
+      margin-top: 20px;
+    }
+    .legend-info {
+      margin-top: 30px;
+      background-color: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    .legend-item {
+      margin-bottom: 15px;
+    }
+    .legend-item h3 {
+      margin: 0 0 5px 0;
+      font-size: 16px;
+    }
+    .legend-item p {
+      margin: 0;
+      color: #666;
+      font-size: 14px;
+    }
+    .back-link {
+      display: inline-block;
+      margin-top: 20px;
+      color: #2980b9;
+      text-decoration: none;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
+  <a href="/" class="back-link">← Voltar para a lista de ações</a>
   <h1>Gráfico de Indicadores - {{ticker}}</h1>
-  <canvas id="chart" width="800" height="400"></canvas>
+  
+  <div class="chart-container">
+    <canvas id="chart" width="800" height="400"></canvas>
+  </div>
+
+  <div class="legend-info">
+    <div class="legend-item">
+      <h3>📈 Preço de Fechamento</h3>
+      <p>O preço final da ação ao término de cada pregão.</p>
+    </div>
+    
+    <div class="legend-item">
+      <h3>📊 Média Móvel de 50 dias (50 MA)</h3>
+      <p>Média dos preços dos últimos 50 dias. Útil para identificar tendências de médio prazo e suportes/resistências.</p>
+    </div>
+    
+    <div class="legend-item">
+      <h3>📊 Média Móvel de 200 dias (200 MA)</h3>
+      <p>Média dos preços dos últimos 200 dias. Usada para identificar tendências de longo prazo e a força geral do mercado.</p>
+    </div>
+    
+    <div class="legend-item">
+      <h3>🔄 RSI (Índice de Força Relativa)</h3>
+      <p>Indicador que mede a velocidade e magnitude das mudanças de preço. Valores acima de 70 podem indicar sobrecompra, enquanto abaixo de 30 podem indicar sobrevenda.</p>
+    </div>
+    
+    <div class="legend-item">
+      <h3>📉 MACD (Convergência/Divergência de Médias Móveis)</h3>
+      <p>Indicador de momentum que mostra a relação entre duas médias móveis exponenciais. Útil para identificar mudanças de tendência e momentum do mercado.</p>
+    </div>
+  </div>
+
   <script>
     async function fetchAndPlot() {
       const ticker = window.location.pathname.substring(1);
@@ -63,9 +133,28 @@
         options: {
           responsive: true,
           scales: {
-            x: { title: { display: true, text: "Data" } },
-            y: { title: { display: true, text: "Valor" } },
+            x: { 
+              title: { display: true, text: "Data" }
+            },
+            y: { 
+              title: { display: true, text: "Valor" }
+            },
           },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const label = context.dataset.label || '';
+                  const value = context.parsed.y;
+                  
+                  if (label === "RSI") {
+                    return `${label}: ${value.toFixed(2)} (Sobrecompra > 70, Sobrevenda < 30)`;
+                  }
+                  return `${label}: ${value.toFixed(2)}`;
+                }
+              }
+            }
+          }
         },
       });
     }

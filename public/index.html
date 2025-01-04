@@ -10,12 +10,33 @@
       max-width: 800px;
       margin: 0 auto;
       padding: 20px;
+      line-height: 1.6;
     }
     .example {
       background-color: #f0f0f0;
-      padding: 10px;
-      border-radius: 5px;
-      margin: 10px 0;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .stocks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .stock-category {
+      margin-top: 20px;
+    }
+    .stock-category h3 {
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+    a {
+      color: #2980b9;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
@@ -24,12 +45,46 @@
   <p>Para visualizar o gráfico de uma ação, acesse a URL com o código da ação desejada.</p>
   
   <div class="example">
-    <p>Exemplos:</p>
-    <ul>
-      <li><a href="/PETR4">PETR4 - Petrobras PN</a></li>
-      <li><a href="/VALE3">VALE3 - Vale ON</a></li>
-      <li><a href="/ITUB4">ITUB4 - Itaú PN</a></li>
-    </ul>
+    <div class="stock-category">
+      <h3>🏦 Bancos</h3>
+      <div class="stocks-grid">
+        <a href="/ITUB4">ITUB4 - Itaú Unibanco PN</a>
+        <a href="/BBDC4">BBDC4 - Bradesco PN</a>
+        <a href="/BBAS3">BBAS3 - Banco do Brasil ON</a>
+        <a href="/SANB11">SANB11 - Santander Units</a>
+      </div>
+    </div>
+
+    <div class="stock-category">
+      <h3>🛢️ Commodities</h3>
+      <div class="stocks-grid">
+        <a href="/PETR4">PETR4 - Petrobras PN</a>
+        <a href="/PETR3">PETR3 - Petrobras ON</a>
+        <a href="/VALE3">VALE3 - Vale ON</a>
+        <a href="/CSNA3">CSNA3 - CSN ON</a>
+        <a href="/GGBR4">GGBR4 - Gerdau PN</a>
+      </div>
+    </div>
+
+    <div class="stock-category">
+      <h3>🛍️ Varejo</h3>
+      <div class="stocks-grid">
+        <a href="/MGLU3">MGLU3 - Magazine Luiza ON</a>
+        <a href="/VVAR3">VVAR3 - Via Varejo ON</a>
+        <a href="/AMER3">AMER3 - Americanas ON</a>
+        <a href="/LREN3">LREN3 - Lojas Renner ON</a>
+      </div>
+    </div>
+
+    <div class="stock-category">
+      <h3>📱 Tecnologia</h3>
+      <div class="stocks-grid">
+        <a href="/TOTS3">TOTS3 - Totvs ON</a>
+        <a href="/LWSA3">LWSA3 - Locaweb ON</a>
+        <a href="/CASH3">CASH3 - Méliuz ON</a>
+        <a href="/POSI3">POSI3 - Positivo ON</a>
+      </div>
+    </div>
   </div>
 </body>
 </html>
