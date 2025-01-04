@@ -8,46 +8,84 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 1000px;
       margin: 0 auto;
       padding: 20px;
+      max-width: 1600px;
     }
-    .chart-container {
+
+    .main-container {
+      display: grid;
+      gap: 20px;
       margin-top: 20px;
     }
+
+    @media (min-width: 1200px) {
+      .main-container {
+        grid-template-columns: 1fr 450px;
+        align-items: start;
+      }
+      
+      .framework {
+        position: sticky;
+        top: 20px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+      }
+    }
+
+    .chart-section {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .chart-container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
     .legend-info {
-      margin-top: 30px;
       background-color: #f8f9fa;
       padding: 20px;
       border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
+
     .legend-item {
       margin-bottom: 15px;
     }
+
     .legend-item h3 {
       margin: 0 0 5px 0;
       font-size: 16px;
     }
+
     .legend-item p {
       margin: 0;
       color: #666;
       font-size: 14px;
     }
+
     .back-link {
       display: inline-block;
-      margin-top: 20px;
+      margin-bottom: 20px;
       color: #2980b9;
       text-decoration: none;
     }
+
     .back-link:hover {
       text-decoration: underline;
     }
+
     .controls {
-      margin: 20px 0;
       display: flex;
       gap: 10px;
       align-items: center;
+      flex-wrap: wrap;
     }
+
     .period-button {
       padding: 8px 16px;
       border: 1px solid #ddd;
@@ -57,14 +95,17 @@
       font-size: 14px;
       transition: all 0.2s;
     }
+
     .period-button:hover {
       background: #f0f0f0;
     }
+
     .period-button.active {
       background: #2980b9;
       color: white;
       border-color: #2980b9;
     }
+
     .error-message {
       color: #e74c3c;
       padding: 10px;
@@ -73,53 +114,230 @@
       margin: 10px 0;
       display: none;
     }
+
+    .framework {
+      background-color: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .framework h2 {
+      color: #2c3e50;
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 1.5em;
+    }
+
+    .framework h3 {
+      color: #2980b9;
+      margin: 25px 0 15px;
+      font-size: 1.2em;
+    }
+
+    .framework ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+
+    .framework li {
+      margin: 8px 0;
+      font-size: 14px;
+    }
+
+    .framework-section {
+      margin-bottom: 30px;
+    }
+
+    .framework p {
+      font-size: 14px;
+      margin: 10px 0;
+    }
+
+    .example-box {
+      background-color: #e8f4fc;
+      padding: 20px;
+      border-radius: 6px;
+      margin: 20px 0;
+    }
+
+    .example-box h4 {
+      color: #2980b9;
+      margin-top: 0;
+      font-size: 1.1em;
+    }
+
+    /* Scrollbar styling for the framework */
+    .framework::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .framework::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+
+    .framework::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 4px;
+    }
+
+    .framework::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
   </style>
 </head>
 <body>
   <a href="/" class="back-link">← Voltar para a lista de ações</a>
   <h1>Gráfico de Indicadores - {{ticker}}</h1>
   
-  <div class="controls">
-    <button class="period-button" data-period="1D">1D</button>
-    <button class="period-button" data-period="1W">1W</button>
-    <button class="period-button" data-period="1M">1M</button>
-    <button class="period-button active" data-period="3M">3M</button>
-    <button class="period-button" data-period="6M">6M</button>
-    <button class="period-button" data-period="1Y">1Y</button>
-    <button class="period-button" data-period="5Y">5Y</button>
-    <button class="period-button" data-period="ALL">ALL</button>
-  </div>
+  <div class="main-container">
+    <div class="chart-section">
+      <div class="controls">
+        <button class="period-button" data-period="1D">1D</button>
+        <button class="period-button" data-period="1W">1W</button>
+        <button class="period-button" data-period="1M">1M</button>
+        <button class="period-button active" data-period="3M">3M</button>
+        <button class="period-button" data-period="6M">6M</button>
+        <button class="period-button" data-period="1Y">1Y</button>
+        <button class="period-button" data-period="5Y">5Y</button>
+        <button class="period-button" data-period="ALL">ALL</button>
+      </div>
 
-  <div class="error-message" id="errorMessage"></div>
-  
-  <div class="chart-container">
-    <canvas id="chart" width="800" height="400"></canvas>
-  </div>
+      <div class="error-message" id="errorMessage"></div>
+      
+      <div class="chart-container">
+        <canvas id="chart" width="800" height="400"></canvas>
+      </div>
 
-  <div class="legend-info">
-    <div class="legend-item">
-      <h3>📈 Preço de Fechamento</h3>
-      <p>O preço final da ação ao término de cada pregão.</p>
+      <div class="legend-info">
+        <div class="legend-item">
+          <h3>📈 Preço de Fechamento</h3>
+          <p>O preço final da ação ao término de cada pregão.</p>
+        </div>
+        
+        <div class="legend-item">
+          <h3>📊 Média Móvel de 50 dias (50 MA)</h3>
+          <p>Média dos preços dos últimos 50 dias. Útil para identificar tendências de médio prazo e suportes/resistências.</p>
+        </div>
+        
+        <div class="legend-item">
+          <h3>📊 Média Móvel de 200 dias (200 MA)</h3>
+          <p>Média dos preços dos últimos 200 dias. Usada para identificar tendências de longo prazo e a força geral do mercado.</p>
+        </div>
+        
+        <div class="legend-item">
+          <h3>🔄 RSI (Índice de Força Relativa)</h3>
+          <p>Indicador que mede a velocidade e magnitude das mudanças de preço. Valores acima de 70 podem indicar sobrecompra, enquanto abaixo de 30 podem indicar sobrevenda.</p>
+        </div>
+        
+        <div class="legend-item">
+          <h3>📉 MACD (Convergência/Divergência de Médias Móveis)</h3>
+          <p>Indicador de momentum que mostra a relação entre duas médias móveis exponenciais. Útil para identificar mudanças de tendência e momentum do mercado.</p>
+        </div>
+      </div>
     </div>
-    
-    <div class="legend-item">
-      <h3>📊 Média Móvel de 50 dias (50 MA)</h3>
-      <p>Média dos preços dos últimos 50 dias. Útil para identificar tendências de médio prazo e suportes/resistências.</p>
-    </div>
-    
-    <div class="legend-item">
-      <h3>📊 Média Móvel de 200 dias (200 MA)</h3>
-      <p>Média dos preços dos últimos 200 dias. Usada para identificar tendências de longo prazo e a força geral do mercado.</p>
-    </div>
-    
-    <div class="legend-item">
-      <h3>🔄 RSI (Índice de Força Relativa)</h3>
-      <p>Indicador que mede a velocidade e magnitude das mudanças de preço. Valores acima de 70 podem indicar sobrecompra, enquanto abaixo de 30 podem indicar sobrevenda.</p>
-    </div>
-    
-    <div class="legend-item">
-      <h3>📉 MACD (Convergência/Divergência de Médias Móveis)</h3>
-      <p>Indicador de momentum que mostra a relação entre duas médias móveis exponenciais. Útil para identificar mudanças de tendência e momentum do mercado.</p>
+
+    <div class="framework">
+      <h2>Framework para Identificar Pontos de Entrada e Saída</h2>
+      
+      <div class="framework-section">
+        <h3>1. Análise de Tendência Geral (50 MA e 200 MA)</h3>
+        <p>Confirme a direção da tendência:</p>
+        <ul>
+          <li>Preço acima da 200 MA → Tendência de alta.</li>
+          <li>Preço abaixo da 200 MA → Tendência de baixa.</li>
+        </ul>
+        <p>Cruzes de médias móveis (Golden Cross e Death Cross):</p>
+        <ul>
+          <li>Golden Cross → Tendência de alta confirmada (sinal de compra).</li>
+          <li>Death Cross → Tendência de baixa confirmada (sinal de venda).</li>
+        </ul>
+      </div>
+
+      <div class="framework-section">
+        <h3>2. Identificação de Força Relativa (RSI)</h3>
+        <p>Ponto de compra:</p>
+        <ul>
+          <li>RSI abaixo de 30 e começando a subir → Potencial reversão para alta.</li>
+        </ul>
+        <p>Ponto de venda:</p>
+        <ul>
+          <li>RSI acima de 70 e começando a cair → Potencial reversão para baixa.</li>
+        </ul>
+        <p>Divergências:</p>
+        <ul>
+          <li>RSI subindo enquanto o preço cai → Sinal de alta (compra).</li>
+          <li>RSI caindo enquanto o preço sobe → Sinal de baixa (venda).</li>
+        </ul>
+      </div>
+
+      <div class="framework-section">
+        <h3>3. Confirmação de Momento (MACD)</h3>
+        <p>Confirme o sinal de entrada:</p>
+        <ul>
+          <li>MACD cruza acima da linha de sinal → Momento de alta (confirmação de compra).</li>
+        </ul>
+        <p>Confirme o sinal de saída:</p>
+        <ul>
+          <li>MACD cruza abaixo da linha de sinal → Momento de baixa (confirmação de venda).</li>
+          <li>Histograma crescente: Força na tendência de alta.</li>
+          <li>Histograma decrescente: Força na tendência de baixa.</li>
+        </ul>
+      </div>
+
+      <div class="framework-section">
+        <h3>4. Combinação dos Indicadores</h3>
+        <p>Entrada ideal (compra):</p>
+        <ul>
+          <li>Preço acima da 200 MA (tendência de alta confirmada).</li>
+          <li>RSI saindo da zona de sobrevenda (abaixo de 30).</li>
+          <li>MACD cruzando acima da linha de sinal ou histograma aumentando.</li>
+          <li>Preferencialmente após um Golden Cross (50 MA acima da 200 MA).</li>
+        </ul>
+        <p>Saída ideal (venda):</p>
+        <ul>
+          <li>Preço abaixo da 200 MA (tendência de baixa confirmada).</li>
+          <li>RSI saindo da zona de sobrecompra (acima de 70).</li>
+          <li>MACD cruzando abaixo da linha de sinal ou histograma diminuindo.</li>
+          <li>Preferencialmente após um Death Cross (50 MA abaixo da 200 MA).</li>
+        </ul>
+      </div>
+
+      <div class="framework-section">
+        <h3>Regras Adicionais</h3>
+        <p>Evite sinais falsos em mercados laterais:</p>
+        <ul>
+          <li>Espere por pelo menos dois indicadores alinhados antes de agir.</li>
+        </ul>
+        <p>Use stop-loss e take-profit:</p>
+        <ul>
+          <li>Defina níveis claros de perdas e lucros para proteger seu capital.</li>
+        </ul>
+        <p>Combine com análise fundamentalista:</p>
+        <ul>
+          <li>Confirmar que os fundamentos da empresa/macroeconomia estão alinhados com a análise técnica.</li>
+        </ul>
+      </div>
+
+      <div class="framework-section">
+        <h3>Exemplo Prático</h3>
+        <div class="example-box">
+          <h4>Cenário de Compra:</h4>
+          <ul>
+            <li>Preço está acima da 200 MA, e a 50 MA cruza acima da 200 MA (Golden Cross).</li>
+            <li>RSI está em 40 e subindo (saindo da sobrevenda).</li>
+            <li>MACD cruza acima da linha de sinal com histograma crescendo.</li>
+            <li><strong>Entrada:</strong> Forte sinal de compra.</li>
+          </ul>
+          <h4>Cenário de Venda:</h4>
+          <ul>
+            <li>Após algumas semanas, o RSI atinge 75, e o MACD começa a cruzar abaixo da linha de sinal com histograma negativo.</li>
+            <li><strong>Saída:</strong> Forte sinal de venda.</li>
+          </ul>
+        </div>
+        <p><em>Esse framework combina a força de indicadores complementares para minimizar falsos sinais e maximizar oportunidades.</em></p>
+      </div>
     </div>
   </div>
 

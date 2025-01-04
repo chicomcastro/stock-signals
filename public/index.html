@@ -7,7 +7,7 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 800px;
+      max-width: 1200px;
       margin: 0 auto;
       padding: 20px;
       line-height: 1.6;
@@ -37,6 +37,42 @@
     }
     a:hover {
       text-decoration: underline;
+    }
+    .framework {
+      margin-top: 40px;
+      padding: 30px;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .framework h2 {
+      color: #2c3e50;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .framework h3 {
+      color: #2980b9;
+      margin: 25px 0 15px;
+    }
+    .framework ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .framework li {
+      margin: 8px 0;
+    }
+    .framework-section {
+      margin-bottom: 30px;
+    }
+    .example-box {
+      background-color: #e8f4fc;
+      padding: 20px;
+      border-radius: 6px;
+      margin: 20px 0;
+    }
+    .example-box h4 {
+      color: #2980b9;
+      margin-top: 0;
     }
   </style>
 </head>
@@ -84,6 +120,108 @@
         <a href="/CASH3">CASH3 - Méliuz ON</a>
         <a href="/POSI3">POSI3 - Positivo ON</a>
       </div>
+    </div>
+  </div>
+
+  <div class="framework">
+    <h2>Framework para Identificar Pontos de Entrada e Saída</h2>
+    
+    <div class="framework-section">
+      <h3>1. Análise de Tendência Geral (50 MA e 200 MA)</h3>
+      <p>Confirme a direção da tendência:</p>
+      <ul>
+        <li>Preço acima da 200 MA → Tendência de alta.</li>
+        <li>Preço abaixo da 200 MA → Tendência de baixa.</li>
+      </ul>
+      <p>Cruzes de médias móveis (Golden Cross e Death Cross):</p>
+      <ul>
+        <li>Golden Cross → Tendência de alta confirmada (sinal de compra).</li>
+        <li>Death Cross → Tendência de baixa confirmada (sinal de venda).</li>
+      </ul>
+    </div>
+
+    <div class="framework-section">
+      <h3>2. Identificação de Força Relativa (RSI)</h3>
+      <p>Ponto de compra:</p>
+      <ul>
+        <li>RSI abaixo de 30 e começando a subir → Potencial reversão para alta.</li>
+      </ul>
+      <p>Ponto de venda:</p>
+      <ul>
+        <li>RSI acima de 70 e começando a cair → Potencial reversão para baixa.</li>
+      </ul>
+      <p>Divergências:</p>
+      <ul>
+        <li>RSI subindo enquanto o preço cai → Sinal de alta (compra).</li>
+        <li>RSI caindo enquanto o preço sobe → Sinal de baixa (venda).</li>
+      </ul>
+    </div>
+
+    <div class="framework-section">
+      <h3>3. Confirmação de Momento (MACD)</h3>
+      <p>Confirme o sinal de entrada:</p>
+      <ul>
+        <li>MACD cruza acima da linha de sinal → Momento de alta (confirmação de compra).</li>
+      </ul>
+      <p>Confirme o sinal de saída:</p>
+      <ul>
+        <li>MACD cruza abaixo da linha de sinal → Momento de baixa (confirmação de venda).</li>
+        <li>Histograma crescente: Força na tendência de alta.</li>
+        <li>Histograma decrescente: Força na tendência de baixa.</li>
+      </ul>
+    </div>
+
+    <div class="framework-section">
+      <h3>4. Combinação dos Indicadores</h3>
+      <p>Entrada ideal (compra):</p>
+      <ul>
+        <li>Preço acima da 200 MA (tendência de alta confirmada).</li>
+        <li>RSI saindo da zona de sobrevenda (abaixo de 30).</li>
+        <li>MACD cruzando acima da linha de sinal ou histograma aumentando.</li>
+        <li>Preferencialmente após um Golden Cross (50 MA acima da 200 MA).</li>
+      </ul>
+      <p>Saída ideal (venda):</p>
+      <ul>
+        <li>Preço abaixo da 200 MA (tendência de baixa confirmada).</li>
+        <li>RSI saindo da zona de sobrecompra (acima de 70).</li>
+        <li>MACD cruzando abaixo da linha de sinal ou histograma diminuindo.</li>
+        <li>Preferencialmente após um Death Cross (50 MA abaixo da 200 MA).</li>
+      </ul>
+    </div>
+
+    <div class="framework-section">
+      <h3>Regras Adicionais</h3>
+      <p>Evite sinais falsos em mercados laterais:</p>
+      <ul>
+        <li>Espere por pelo menos dois indicadores alinhados antes de agir.</li>
+      </ul>
+      <p>Use stop-loss e take-profit:</p>
+      <ul>
+        <li>Defina níveis claros de perdas e lucros para proteger seu capital.</li>
+      </ul>
+      <p>Combine com análise fundamentalista:</p>
+      <ul>
+        <li>Confirmar que os fundamentos da empresa/macroeconomia estão alinhados com a análise técnica.</li>
+      </ul>
+    </div>
+
+    <div class="framework-section">
+      <h3>Exemplo Prático</h3>
+      <div class="example-box">
+        <h4>Cenário de Compra:</h4>
+        <ul>
+          <li>Preço está acima da 200 MA, e a 50 MA cruza acima da 200 MA (Golden Cross).</li>
+          <li>RSI está em 40 e subindo (saindo da sobrevenda).</li>
+          <li>MACD cruza acima da linha de sinal com histograma crescendo.</li>
+          <li><strong>Entrada:</strong> Forte sinal de compra.</li>
+        </ul>
+        <h4>Cenário de Venda:</h4>
+        <ul>
+          <li>Após algumas semanas, o RSI atinge 75, e o MACD começa a cruzar abaixo da linha de sinal com histograma negativo.</li>
+          <li><strong>Saída:</strong> Forte sinal de venda.</li>
+        </ul>
+      </div>
+      <p><em>Esse framework combina a força de indicadores complementares para minimizar falsos sinais e maximizar oportunidades.</em></p>
     </div>
   </div>
 </body>
