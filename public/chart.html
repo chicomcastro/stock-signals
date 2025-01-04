@@ -42,11 +42,55 @@
     .back-link:hover {
       text-decoration: underline;
     }
+    .controls {
+      margin: 20px 0;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .period-button {
+      padding: 8px 16px;
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .period-button:hover {
+      background: #f0f0f0;
+    }
+    .period-button.active {
+      background: #2980b9;
+      color: white;
+      border-color: #2980b9;
+    }
+    .error-message {
+      color: #e74c3c;
+      padding: 10px;
+      border-radius: 4px;
+      background: #fde8e7;
+      margin: 10px 0;
+      display: none;
+    }
   </style>
 </head>
 <body>
   <a href="/" class="back-link">← Voltar para a lista de ações</a>
   <h1>Gráfico de Indicadores - {{ticker}}</h1>
+  
+  <div class="controls">
+    <button class="period-button" data-period="1D">1D</button>
+    <button class="period-button" data-period="1W">1W</button>
+    <button class="period-button" data-period="1M">1M</button>
+    <button class="period-button active" data-period="3M">3M</button>
+    <button class="period-button" data-period="6M">6M</button>
+    <button class="period-button" data-period="1Y">1Y</button>
+    <button class="period-button" data-period="5Y">5Y</button>
+    <button class="period-button" data-period="ALL">ALL</button>
+  </div>
+
+  <div class="error-message" id="errorMessage"></div>
   
   <div class="chart-container">
     <canvas id="chart" width="800" height="400"></canvas>
@@ -80,86 +124,126 @@
   </div>
 
   <script>
-    async function fetchAndPlot() {
+    let currentChart = null;
+
+    async function fetchAndPlot(period = '3M') {
       const ticker = window.location.pathname.substring(1);
-      const response = await fetch(`/data/${ticker}`);
-      const data = await response.json();
+      const errorMessage = document.getElementById('errorMessage');
+      
+      try {
+        const response = await fetch(`/data/${ticker}?period=${period}`);
+        const data = await response.json();
 
-      const labels = data.dates.map(date => new Date(date).toLocaleDateString());
-      const ctx = document.getElementById("chart").getContext("2d");
+        if (data.error) {
+          throw new Error(data.error);
+        }
 
-      new Chart(ctx, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label: "Preço de Fechamento",
-              data: data.closePrices,
-              borderColor: "blue",
-              borderWidth: 2,
-              fill: false,
-            },
-            {
-              label: "50 MA",
-              data: [null, ...data.sma50],
-              borderColor: "green",
-              borderWidth: 2,
-              fill: false,
-            },
-            {
-              label: "200 MA",
-              data: [null, ...data.sma200],
-              borderColor: "orange",
-              borderWidth: 2,
-              fill: false,
-            },
-            {
-              label: "RSI",
-              data: [null, null, ...data.rsi],
-              borderColor: "purple",
-              borderWidth: 2,
-              fill: false,
-            },
-            {
-              label: "MACD (Linha Principal)",
-              data: [null, null, null, ...data.macd.map(m => m.MACD)],
-              borderColor: "red",
-              borderWidth: 2,
-              fill: false,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          scales: {
-            x: { 
-              title: { display: true, text: "Data" }
-            },
-            y: { 
-              title: { display: true, text: "Valor" }
-            },
+        errorMessage.style.display = 'none';
+        const labels = data.dates.map(date => {
+          const dateObj = new Date(date);
+          if (period === '1D') {
+            return dateObj.toLocaleTimeString();
+          }
+          return dateObj.toLocaleDateString();
+        });
+
+        if (currentChart) {
+          currentChart.destroy();
+        }
+
+        const ctx = document.getElementById("chart").getContext("2d");
+        currentChart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Preço de Fechamento",
+                data: data.closePrices,
+                borderColor: "blue",
+                borderWidth: 2,
+                fill: false,
+              },
+              {
+                label: period === '1D' ? '10 MA' : '50 MA',
+                data: [null, ...data.sma50],
+                borderColor: "green",
+                borderWidth: 2,
+                fill: false,
+              },
+              {
+                label: period === '1D' ? '20 MA' : '200 MA',
+                data: [null, ...data.sma200],
+                borderColor: "orange",
+                borderWidth: 2,
+                fill: false,
+              },
+              {
+                label: "RSI",
+                data: [null, null, ...data.rsi],
+                borderColor: "purple",
+                borderWidth: 2,
+                fill: false,
+              },
+              {
+                label: "MACD (Linha Principal)",
+                data: [null, null, null, ...data.macd.map(m => m.MACD)],
+                borderColor: "red",
+                borderWidth: 2,
+                fill: false,
+              },
+            ],
           },
-          plugins: {
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  const label = context.dataset.label || '';
-                  const value = context.parsed.y;
-                  
-                  if (label === "RSI") {
-                    return `${label}: ${value.toFixed(2)} (Sobrecompra > 70, Sobrevenda < 30)`;
+          options: {
+            responsive: true,
+            scales: {
+              x: { 
+                title: { display: true, text: "Data" }
+              },
+              y: { 
+                title: { display: true, text: "Valor" }
+              },
+            },
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const label = context.dataset.label || '';
+                    const value = context.parsed.y;
+                    
+                    if (label === "RSI") {
+                      return `${label}: ${value.toFixed(2)} (Sobrecompra > 70, Sobrevenda < 30)`;
+                    }
+                    return `${label}: ${value.toFixed(2)}`;
                   }
-                  return `${label}: ${value.toFixed(2)}`;
                 }
               }
             }
-          }
-        },
-      });
+          },
+        });
+      } catch (error) {
+        errorMessage.textContent = error.message;
+        errorMessage.style.display = 'block';
+      }
     }
 
-    // Carrega o gráfico quando a página é carregada
+    // Configura os botões de período
+    document.querySelectorAll('.period-button').forEach(button => {
+      button.addEventListener('click', async () => {
+        // Remove a classe active de todos os botões
+        document.querySelectorAll('.period-button').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        
+        // Adiciona a classe active ao botão clicado
+        button.classList.add('active');
+        
+        // Atualiza o gráfico com o novo período
+        await fetchAndPlot(button.dataset.period);
+      });
+    });
+
+    // Carrega o gráfico inicial
     fetchAndPlot();
   </script>
 </body>
