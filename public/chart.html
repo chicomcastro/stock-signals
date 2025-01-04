@@ -186,46 +186,53 @@
                 label: "MACD (Linha Principal)",
                 data: [null, null, null, ...data.macd.map(m => m.MACD)],
                 borderColor: "red",
-                borderWidth: 2,
+                borderWidth: 1,
                 fill: false,
                 yAxisID: 'y',
-                order: 5
+                order: 5,
+                pointRadius: 0
               },
               {
                 label: "RSI",
                 data: [null, null, ...data.rsi],
                 borderColor: "purple",
-                borderWidth: 2,
+                borderWidth: 1,
                 fill: false,
                 yAxisID: 'y1',
-                order: 4
+                order: 4,
+                pointRadius: 0
               },
               {
                 label: period === '1D' ? '20 MA' : '200 MA',
                 data: [null, ...data.sma200],
                 borderColor: "orange",
-                borderWidth: 2,
+                borderWidth: 1,
                 fill: false,
                 yAxisID: 'y',
-                order: 3
+                order: 3,
+                pointRadius: 0
               },
               {
                 label: period === '1D' ? '10 MA' : '50 MA',
                 data: [null, ...data.sma50],
                 borderColor: "green",
-                borderWidth: 2,
+                borderWidth: 1,
                 fill: false,
                 yAxisID: 'y',
-                order: 2
+                order: 2,
+                pointRadius: 0
               },
               {
                 label: "Preço de Fechamento",
                 data: data.closePrices,
-                borderColor: "blue",
-                borderWidth: 2,
-                fill: false,
+                borderColor: "rgb(255, 82, 82)",
+                backgroundColor: "rgba(255, 82, 82, 0.1)",
+                borderWidth: 1,
+                fill: true,
                 yAxisID: 'y',
-                order: 1
+                order: 1,
+                pointRadius: 0,
+                tension: 0.1
               },
               {
                 label: "Death Cross",
