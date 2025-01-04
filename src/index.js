@@ -10,14 +10,6 @@ app.use(express.static("public")); // Serve arquivos estáticos
 function getDateRange(period) {
   const now = new Date();
   switch (period) {
-    case "1D":
-      const oneDayAgo = new Date(now);
-      oneDayAgo.setDate(now.getDate() - 1);
-      return { period1: oneDayAgo };
-    case "1W":
-      const oneWeekAgo = new Date(now);
-      oneWeekAgo.setDate(now.getDate() - 7);
-      return { period1: oneWeekAgo };
     case "1M":
       const oneMonthAgo = new Date(now);
       oneMonthAgo.setMonth(now.getMonth() - 1);
@@ -48,7 +40,7 @@ async function fetchHistoricalData(ticker, period = "3M") {
   const dateRange = getDateRange(period);
   const historicalData = await yahooFinance.historical(ticker, {
     ...dateRange,
-    interval: period === "1D" ? "5m" : "1d",
+    interval: "1d"
   });
 
   if (!historicalData || historicalData.length === 0) {
@@ -58,15 +50,10 @@ async function fetchHistoricalData(ticker, period = "3M") {
   const closePrices = historicalData.map((data) => data.close);
   const dates = historicalData.map((data) => data.date);
 
-  // Ajusta os períodos dos indicadores com base no timeframe
-  const smaFastPeriod = period === "1D" ? 10 : 50;
-  const smaSlowPeriod = period === "1D" ? 20 : 200;
-  const rsiPeriod = period === "1D" ? 7 : 14;
-
   // Calcula indicadores
-  const sma50 = SMA.calculate({ period: smaFastPeriod, values: closePrices });
-  const sma200 = SMA.calculate({ period: smaSlowPeriod, values: closePrices });
-  const rsi = RSI.calculate({ period: rsiPeriod, values: closePrices });
+  const sma50 = SMA.calculate({ period: 50, values: closePrices });
+  const sma200 = SMA.calculate({ period: 200, values: closePrices });
+  const rsi = RSI.calculate({ period: 14, values: closePrices });
   const macd = MACD.calculate({
     values: closePrices,
     fastPeriod: 12,
@@ -106,7 +93,7 @@ app.get("/:ticker", (req, res) => {
 app.get("/data/:ticker", async (req, res) => {
   try {
     const { ticker } = req.params;
-    const period = req.query.period || "ALL";
+    const period = req.query.period || "3M";
     const data = await fetchHistoricalData(`${ticker}.SA`, period);
     res.json(data);
   } catch (error) {
