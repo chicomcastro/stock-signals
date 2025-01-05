@@ -367,20 +367,19 @@
         const crossPoints = [];
         let lastState = null;
         
-        // Começamos a partir do índice que tem ambas as médias disponíveis
-        for (let i = Math.max(data.sma50.length, data.sma200.length) - 1; i >= 0; i--) {
+        // Começamos do início para identificar os cruzamentos na ordem correta
+        for (let i = 0; i < data.sma50.length; i++) {
           const sma50Value = data.sma50[i];
           const sma200Value = data.sma200[i];
-          const dateIndex = data.closePrices.length - data.sma50.length + i;
           
           if (sma50Value && sma200Value) {
             const currentState = sma50Value > sma200Value;
             
             if (lastState !== null && currentState !== lastState) {
               crossPoints.push({
-                index: dateIndex,
+                index: i,
                 type: currentState ? 'golden' : 'death',
-                value: data.closePrices[dateIndex]
+                value: data.closePrices[i]
               });
             }
             
@@ -400,7 +399,7 @@
             datasets: [
               {
                 label: "MACD (Linha Principal)",
-                data: [null, null, null, ...data.macd.map(m => m.MACD)],
+                data: data.macd,
                 borderColor: "red",
                 borderWidth: 1,
                 fill: false,
@@ -410,7 +409,7 @@
               },
               {
                 label: "RSI",
-                data: [null, null, ...data.rsi],
+                data: data.rsi,
                 borderColor: "purple",
                 borderWidth: 1,
                 fill: false,

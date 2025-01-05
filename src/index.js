@@ -47,7 +47,6 @@ function getDateRange(period, includeExtraHistory = false) {
 }
 
 async function fetchHistoricalData(ticker, period = "3M") {
-  console.log('\n\n--------\n\n');
   // Primeiro, busca dados extras para calcular as médias móveis
   const extraDateRange = getDateRange(period, true);
   const historicalDataExtra = await yahooFinance.historical(ticker, {
@@ -65,36 +64,37 @@ async function fetchHistoricalData(ticker, period = "3M") {
   
   // Filtra os dados para o período solicitado
   const historicalData = historicalDataExtra.filter(data => new Date(data.date) >= startDate);
-  console.log('historicalData', historicalData.length);
+
   // Calcula as médias móveis com todos os dados disponíveis
   const allClosePrices = historicalDataExtra.map((data) => data.close);
-  console.log('allClosePrices', allClosePrices, allClosePrices.length);
   const sma50Values = SMA.calculate({ period: 50, values: allClosePrices.reverse() }).slice(0, historicalData.length).reverse();
   const sma200Values = SMA.calculate({ period: 200, values: allClosePrices.reverse() }).slice(0, historicalData.length).reverse();
-  console.log('sma50Values', sma50Values, sma50Values.length);
-  console.log('sma200Values', sma200Values, sma200Values.length);
 
-  const closePrices = historicalData.map((data) => data.close);
-  const dates = historicalData.map((data) => data.date);
+  // Calcula RSI e MACD com todos os dados disponíveis
+  const allRsi = RSI.calculate({ 
+    period: 14, 
+    values: allClosePrices.reverse()
+  }).slice(0, historicalData.length).reverse();
 
-  // Calcula os outros indicadores apenas para o período solicitado
-  const rsi = RSI.calculate({ period: 14, values: closePrices });
-  const macd = MACD.calculate({
-    values: closePrices,
+  const allMacd = MACD.calculate({
+    values: allClosePrices.reverse(),
     fastPeriod: 12,
     slowPeriod: 26,
     signalPeriod: 9,
     SimpleMAOscillator: false,
     SimpleMASignal: false,
-  });
+  }).slice(0, historicalData.length).reverse();
+
+  const closePrices = historicalData.map((data) => data.close);
+  const dates = historicalData.map((data) => data.date);
 
   return {
     dates,
     closePrices,
     sma50: sma50Values,
     sma200: sma200Values,
-    rsi,
-    macd,
+    rsi: allRsi,
+    macd: allMacd.map(m => m.MACD),
   };
 }
 
