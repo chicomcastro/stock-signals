@@ -343,10 +343,10 @@
 
   <div class="view-toggle">
     <button onclick="toggleView('grid')" class="active" data-view="grid">Grade</button>
-    <button onclick="toggleView('list')" data-view="list">Lista</button>
+    <button onclick="toggleView('list')" class="active" data-view="list">Lista</button>
   </div>
 
-  <div id="favorites-container" class="view-grid">
+  <div id="favorites-container" class="view-list">
     <div class="no-favorites">
       Você ainda não tem nenhum ativo favorito.
       Navegue pelos ativos e clique na estrela para adicionar aos favoritos.
@@ -538,12 +538,16 @@
           const chartData = {
             prices: data.closePrices,
             dates: data.dates.map(date => {
-              const d = new Date(date);
-              return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+              const dateObj = new Date(date);
+              return dateObj.toLocaleDateString();
             }),
-            rsi: data.analysis.map(a => a.rsi.value),
-            macd: data.analysis.map(a => a.macd.value),
-            signal: data.analysis.map(a => a.macd.signal)
+            rsi: data.rsi,
+            macd: data.macd,
+            signal: data.signal,
+            sma50: data.sma50,
+            sma200: data.sma200,
+            crossPoints: data.crossPoints,
+            macdCrossPoints: data.macdCrossPoints
           };
           
           // Create charts immediately
@@ -561,44 +565,133 @@
                 return;
               }
 
+              const datasets = [
+                {
+                  label: "Preço de Fechamento",
+                  data: data.closePrices,
+                  borderColor: "rgb(255, 82, 82)",
+                  backgroundColor: "rgba(255, 82, 82, 0.1)",
+                  borderWidth: 1,
+                  fill: true,
+                  yAxisID: 'y',
+                  order: 1,
+                  pointRadius: 0,
+                  tension: 0.1
+                },
+                {
+                  label: '50 MA',
+                  data: data.sma50,
+                  borderColor: "green",
+                  borderWidth: 1,
+                  fill: false,
+                  yAxisID: 'y',
+                  order: 2,
+                  pointRadius: 0
+                },
+                {
+                  label: '200 MA',
+                  data: data.sma200,
+                  borderColor: "orange",
+                  borderWidth: 1,
+                  fill: false,
+                  yAxisID: 'y',
+                  order: 3,
+                  pointRadius: 0
+                },
+                {
+                  label: "RSI",
+                  data: data.rsi,
+                  borderColor: "purple",
+                  borderWidth: 1,
+                  fill: false,
+                  yAxisID: 'y1',
+                  order: 4,
+                  pointRadius: 0
+                },
+                {
+                  label: "MACD",
+                  data: data.macd,
+                  borderColor: "red",
+                  borderWidth: 1,
+                  fill: false,
+                  yAxisID: 'y',
+                  order: 5,
+                  pointRadius: 0,
+                  hidden: true
+                }
+              ];
+
+              // Adiciona os pontos de cruzamento
+              datasets.push(
+                {
+                  label: "Death Cross",
+                  data: data.closePrices.map((value, index) => {
+                    const crossPoint = data.crossPoints.find(p => p.type === 'death' && p.date === data.dates[index]);
+                    return crossPoint ? crossPoint.value : null;
+                  }),
+                  backgroundColor: '#FF0000',
+                  borderColor: '#FF0000',
+                  pointStyle: 'star',
+                  pointRadius: 15,
+                  pointHoverRadius: 20,
+                  showLine: false,
+                  yAxisID: 'y',
+                  order: 0
+                },
+                {
+                  label: "Golden Cross",
+                  data: data.closePrices.map((value, index) => {
+                    const crossPoint = data.crossPoints.find(p => p.type === 'golden' && p.date === data.dates[index]);
+                    return crossPoint ? crossPoint.value : null;
+                  }),
+                  backgroundColor: '#FFD700',
+                  borderColor: '#FFD700',
+                  pointStyle: 'star',
+                  pointRadius: 15,
+                  pointHoverRadius: 20,
+                  showLine: false,
+                  yAxisID: 'y',
+                  order: 0
+                },
+                {
+                  label: "MACD Cruzamento Alta",
+                  data: data.closePrices.map((value, index) => {
+                    const macdPoint = data.macdCrossPoints.find(p => p.type === 'up' && p.date === data.dates[index]);
+                    return macdPoint ? macdPoint.value : null;
+                  }),
+                  backgroundColor: '#2ecc71',
+                  borderColor: '#2ecc71',
+                  pointStyle: 'triangle',
+                  pointRadius: 12,
+                  pointHoverRadius: 15,
+                  rotation: 0,
+                  showLine: false,
+                  yAxisID: 'y',
+                  order: 0
+                },
+                {
+                  label: "MACD Cruzamento Baixa",
+                  data: data.closePrices.map((value, index) => {
+                    const macdPoint = data.macdCrossPoints.find(p => p.type === 'down' && p.date === data.dates[index]);
+                    return macdPoint ? macdPoint.value : null;
+                  }),
+                  backgroundColor: '#e74c3c',
+                  borderColor: '#e74c3c',
+                  pointStyle: 'triangle',
+                  pointRadius: 12,
+                  pointHoverRadius: 15,
+                  rotation: 180,
+                  showLine: false,
+                  yAxisID: 'y',
+                  order: 0
+                }
+              );
+
               new Chart(ctx, {
                 type: 'line',
-                data: {
+                data: { 
                   labels: chartData.dates,
-                  datasets: [
-                    {
-                      label: 'Preço',
-                      data: chartData.prices,
-                      borderColor: '#2980b9',
-                      backgroundColor: 'rgba(41, 128, 185, 0.1)',
-                      fill: true,
-                      yAxisID: 'y'
-                    },
-                    {
-                      label: 'RSI',
-                      data: chartData.rsi,
-                      borderColor: '#e67e22',
-                      borderWidth: 1,
-                      pointRadius: 0,
-                      yAxisID: 'y1'
-                    },
-                    {
-                      label: 'MACD',
-                      data: chartData.macd,
-                      borderColor: '#2ecc71',
-                      borderWidth: 1,
-                      pointRadius: 0,
-                      yAxisID: 'y2'
-                    },
-                    {
-                      label: 'Sinal',
-                      data: chartData.signal,
-                      borderColor: '#e74c3c',
-                      borderWidth: 1,
-                      pointRadius: 0,
-                      yAxisID: 'y2'
-                    }
-                  ]
+                  datasets
                 },
                 options: {
                   responsive: true,
@@ -607,25 +700,15 @@
                     mode: 'index',
                     intersect: false,
                   },
-                  plugins: {
-                    tooltip: {
-                      mode: 'index',
-                      intersect: false
-                    }
-                  },
                   scales: {
-                    x: {
-                      grid: {
-                        display: false
-                      }
+                    x: { 
+                      title: { display: true, text: "Data" }
                     },
-                    y: {
+                    y: { 
                       type: 'linear',
                       display: true,
                       position: 'left',
-                      grid: {
-                        borderDash: [2, 4]
-                      }
+                      title: { display: true, text: "Preço" }
                     },
                     y1: {
                       type: 'linear',
@@ -634,15 +717,43 @@
                       min: 0,
                       max: 100,
                       grid: {
-                        drawOnChartArea: false
+                        drawOnChartArea: false,
+                      },
+                      title: { 
+                        display: true, 
+                        text: "RSI" 
+                      },
+                      ticks: {
+                        callback: function(value) {
+                          return value + '%';
+                        }
                       }
-                    },
-                    y2: {
-                      type: 'linear',
-                      display: true,
-                      position: 'right',
-                      grid: {
-                        drawOnChartArea: false
+                    }
+                  },
+                  plugins: {
+                    tooltip: {
+                      callbacks: {
+                        label: function(context) {
+                          const label = context.dataset.label || '';
+                          const value = context.parsed.y;
+                          
+                          if (label === "Golden Cross") {
+                            return "Golden Cross: Sinal de COMPRA - MA50 cruzou acima da MA200";
+                          }
+                          if (label === "Death Cross") {
+                            return "Death Cross: Sinal de VENDA - MA50 cruzou abaixo da MA200";
+                          }
+                          if (label === "MACD Cruzamento Alta") {
+                            return "MACD: Sinal de COMPRA - Cruzou linha zero de baixo para cima";
+                          }
+                          if (label === "MACD Cruzamento Baixa") {
+                            return "MACD: Sinal de VENDA - Cruzou linha zero de cima para baixo";
+                          }
+                          if (label === "RSI") {
+                            return `${label}: ${value.toFixed(2)} (Sobrecompra > 70, Sobrevenda < 30)`;
+                          }
+                          return `${label}: ${value.toFixed(2)}`;
+                        }
                       }
                     }
                   }
