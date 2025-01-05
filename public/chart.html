@@ -357,9 +357,6 @@
         errorMessage.style.display = 'none';
         const labels = data.dates.map(date => {
           const dateObj = new Date(date);
-          if (period === '1D') {
-            return dateObj.toLocaleTimeString();
-          }
           return dateObj.toLocaleDateString();
         });
 
@@ -379,7 +376,8 @@
               crossPoints.push({
                 index: i,
                 type: currentState ? 'golden' : 'death',
-                value: data.closePrices[i]
+                value: data.closePrices[i],
+                label: labels[i]
               });
             }
             
@@ -418,7 +416,7 @@
                 pointRadius: 0
               },
               {
-                label: period === '1D' ? '20 MA' : '200 MA',
+                label: '200 MA',
                 data: data.sma200,
                 borderColor: "orange",
                 borderWidth: 1,
@@ -428,7 +426,7 @@
                 pointRadius: 0
               },
               {
-                label: period === '1D' ? '10 MA' : '50 MA',
+                label: '50 MA',
                 data: data.sma50,
                 borderColor: "green",
                 borderWidth: 1,
@@ -451,10 +449,10 @@
               },
               {
                 label: "Death Cross",
-                data: crossPoints.filter(p => p.type === 'death').map(p => ({
-                  x: labels[p.index],
-                  y: p.value
-                })),
+                data: data.closePrices.map((value, index) => {
+                  const crossPoint = crossPoints.filter(p => p.type === 'death').find(p => p.label === labels[index])
+                  return crossPoint ? crossPoint.value : null
+                }),
                 backgroundColor: '#FF0000',
                 borderColor: '#FF0000',
                 pointStyle: 'star',
@@ -466,10 +464,10 @@
               },
               {
                 label: "Golden Cross",
-                data: crossPoints.filter(p => p.type === 'golden').map(p => ({
-                  x: labels[p.index],
-                  y: p.value
-                })),
+                data: data.closePrices.map((value, index) => {
+                  const crossPoint = crossPoints.filter(p => p.type === 'golden').find(p => p.label === labels[index])
+                  return crossPoint ? crossPoint.value : null
+                }),
                 backgroundColor: '#FFD700',
                 borderColor: '#FFD700',
                 pointStyle: 'star',
