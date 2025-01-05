@@ -48,6 +48,151 @@ function getDateRange(period, includeExtraHistory = false) {
   return { period1: date };
 }
 
+function findCrossPoints(sma50Values, sma200Values, dates, closePrices) {
+  const crossPoints = [];
+  let lastState = null;
+  
+  // Começamos do início para identificar os cruzamentos na ordem correta
+  for (let i = 0; i < sma50Values.length; i++) {
+    const sma50Value = sma50Values[i];
+    const sma200Value = sma200Values[i];
+    
+    if (sma50Value && sma200Value) {
+      const currentState = sma50Value > sma200Value;
+      
+      if (lastState !== null && currentState !== lastState) {
+        crossPoints.push({
+          date: dates[i],
+          type: currentState ? 'golden' : 'death',
+          value: closePrices[i]
+        });
+      }
+      
+      lastState = currentState;
+    }
+  }
+  
+  return crossPoints;
+}
+
+function findMacdCrossPoints(macdValues, dates, closePrices) {
+  const macdCrossPoints = [];
+  
+  for (let i = 1; i < macdValues.length; i++) {
+    const currentMacd = macdValues[i];
+    const prevMacd = macdValues[i - 1];
+    
+    if (prevMacd !== null && currentMacd !== null) {
+      // Verifica se houve cruzamento (mudança de sinal)
+      if ((prevMacd < 0 && currentMacd >= 0) || (prevMacd > 0 && currentMacd <= 0)) {
+        macdCrossPoints.push({
+          date: dates[i],
+          type: prevMacd < 0 ? 'up' : 'down',
+          value: closePrices[i]
+        });
+      }
+    }
+  }
+  
+  return macdCrossPoints;
+}
+
+function analyzePrice(currentPrice, currentSMA200) {
+  return {
+    value: currentPrice,
+    signal: currentPrice > currentSMA200 ? 'entry' : 'exit',
+    message: currentPrice > currentSMA200 ? 
+      'Acima da MA200 (Entrada)' : 
+      'Abaixo da MA200 (Saída)'
+  };
+}
+
+function analyzeRSI(currentRSI) {
+  let signal = 'neutral';
+  let message = 'Neutro';
+  
+  if (currentRSI > 70) {
+    signal = 'exit';
+    message = 'Sobrecomprado (Saída)';
+  } else if (currentRSI < 30) {
+    signal = 'entry';
+    message = 'Sobrevendido (Entrada)';
+  }
+  
+  return {
+    value: currentRSI,
+    signal,
+    message
+  };
+}
+
+function analyzeMACD(currentMACD, prevMACD) {
+  let signal = 'neutral';
+  let message = 'Sem sinal';
+  
+  if (currentMACD > 0 && prevMACD < 0) {
+    signal = 'entry';
+    message = 'MACD cruza acima da linha de sinal (Tendência de alta)';
+  } else if (currentMACD < 0 && prevMACD > 0) {
+    signal = 'exit';
+    message = 'MACD cruza abaixo da linha de sinal (Tendência de baixa)';
+  }
+  
+  return {
+    value: currentMACD,
+    signal,
+    message
+  };
+}
+
+function analyzeCross(currentSMA50, currentSMA200, prevSMA50, prevSMA200) {
+  const currentCross = currentSMA50 > currentSMA200;
+  const prevCross = prevSMA50 > prevSMA200;
+  let signal = 'neutral';
+  let message = 'Sem Cruzamento';
+  
+  if (currentCross && !prevCross) {
+    signal = 'entry';
+    message = 'Golden Cross (Entrada)';
+  } else if (!currentCross && prevCross) {
+    signal = 'exit';
+    message = 'Death Cross (Saída)';
+  } else if (currentCross) {
+    signal = 'entry';
+    message = 'MA50 acima da MA200';
+  } else {
+    signal = 'exit';
+    message = 'MA50 abaixo da MA200';
+  }
+  
+  return {
+    signal,
+    message
+  };
+}
+
+function analyzeIndicators(data, index) {
+  const currentPrice = data.closePrices[index];
+  const currentSMA50 = data.sma50[index];
+  const currentSMA200 = data.sma200[index];
+  const currentRSI = data.rsi[index];
+  const currentMACD = data.macd[index];
+  
+  const prevPrice = data.closePrices[index - 1];
+  const prevSMA50 = data.sma50[index - 1];
+  const prevSMA200 = data.sma200[index - 1];
+  const prevRSI = data.rsi[index - 1];
+  const prevMACD = data.macd[index - 1];
+
+  return {
+    date: data.dates[index],
+    price: analyzePrice(currentPrice, currentSMA200),
+    rsi: analyzeRSI(currentRSI),
+    macd: analyzeMACD(currentMACD, prevMACD),
+    cross: analyzeCross(currentSMA50, currentSMA200, prevSMA50, prevSMA200)
+  };
+}
+
 async function fetchHistoricalData(ticker, period = "3M") {
   // Primeiro, busca dados extras para calcular os indicadores
   const extraDateRange = getDateRange(period, true);
@@ -100,14 +245,26 @@ async function fetchHistoricalData(ticker, period = "3M") {
   const closePrices = historicalData.map((data) => data.close);
   const dates = historicalData.map((data) => data.date);
 
-  return {
+  // Calcula os pontos de cruzamento
+  const crossPoints = findCrossPoints(sma50Values, sma200Values, dates, closePrices);
+  const macdCrossPoints = findMacdCrossPoints(macdValues.map(m => m.MACD), dates, closePrices);
+
+  // Prepara os dados para retorno
+  const responseData = {
     dates,
     closePrices,
     sma50: sma50Values,
     sma200: sma200Values,
     rsi: rsiValues,
     macd: macdValues.map(m => m.MACD),
+    crossPoints,
+    macdCrossPoints
   };
+
+  // Adiciona análise para cada ponto do gráfico
+  responseData.analysis = dates.map((_, index) => analyzeIndicators(responseData, index));
+
+  return responseData;
 }
 
 // Rota para servir o template do gráfico

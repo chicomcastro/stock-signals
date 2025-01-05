@@ -196,6 +196,11 @@
       font-weight: bold;
       margin-left: 5px;
     }
+    .signal-neutral {
+      color: #7f8c8d;
+      font-weight: bold;
+      margin-left: 5px;
+    }
 
     .analysis-box {
       background-color: #f8f9fa;
@@ -414,52 +419,6 @@
           return dateObj.toLocaleDateString();
         });
 
-        // Identificar pontos de Golden Cross e Death Cross
-        const crossPoints = [];
-        let lastState = null;
-        
-        // Começamos do início para identificar os cruzamentos na ordem correta
-        for (let i = 0; i < data.sma50.length; i++) {
-          const sma50Value = data.sma50[i];
-          const sma200Value = data.sma200[i];
-          
-          if (sma50Value && sma200Value) {
-            const currentState = sma50Value > sma200Value;
-            
-            if (lastState !== null && currentState !== lastState) {
-              crossPoints.push({
-                index: i,
-                type: currentState ? 'golden' : 'death',
-                value: data.closePrices[i],
-                label: labels[i]
-              });
-            }
-            
-            lastState = currentState;
-          }
-        }
-
-        // Identificar pontos de cruzamento do MACD com zero
-        const macdCrossPoints = [];
-        let lastMacdState = null;
-        
-        for (let i = 1; i < data.macd.length; i++) {
-          const currentMacd = data.macd[i];
-          const prevMacd = data.macd[i - 1];
-          
-          if (prevMacd !== null && currentMacd !== null) {
-            // Verifica se houve cruzamento (mudança de sinal)
-            if ((prevMacd < 0 && currentMacd >= 0) || (prevMacd > 0 && currentMacd <= 0)) {
-              macdCrossPoints.push({
-                index: i,
-                type: prevMacd < 0 ? 'up' : 'down',
-                value: data.closePrices[i],
-                label: labels[i]
-              });
-            }
-          }
-        }
-
         if (currentChart) {
           currentChart.destroy();
         }
@@ -525,8 +484,8 @@
               {
                 label: "Death Cross",
                 data: data.closePrices.map((value, index) => {
-                  const crossPoint = crossPoints.filter(p => p.type === 'death').find(p => p.label === labels[index])
-                  return crossPoint ? crossPoint.value : null
+                  const crossPoint = data.crossPoints.find(p => p.type === 'death' && p.date === data.dates[index]);
+                  return crossPoint ? crossPoint.value : null;
                 }),
                 backgroundColor: '#FF0000',
                 borderColor: '#FF0000',
@@ -540,8 +499,8 @@
               {
                 label: "Golden Cross",
                 data: data.closePrices.map((value, index) => {
-                  const crossPoint = crossPoints.filter(p => p.type === 'golden').find(p => p.label === labels[index])
-                  return crossPoint ? crossPoint.value : null
+                  const crossPoint = data.crossPoints.find(p => p.type === 'golden' && p.date === data.dates[index]);
+                  return crossPoint ? crossPoint.value : null;
                 }),
                 backgroundColor: '#FFD700',
                 borderColor: '#FFD700',
@@ -555,8 +514,8 @@
               {
                 label: "MACD Cruzamento Alta",
                 data: data.closePrices.map((value, index) => {
-                  const macdPoint = macdCrossPoints.filter(p => p.type === 'up').find(p => p.label === labels[index])
-                  return macdPoint ? macdPoint.value : null
+                  const macdPoint = data.macdCrossPoints.find(p => p.type === 'up' && p.date === data.dates[index]);
+                  return macdPoint ? macdPoint.value : null;
                 }),
                 backgroundColor: '#2ecc71',
                 borderColor: '#2ecc71',
@@ -571,8 +530,8 @@
               {
                 label: "MACD Cruzamento Baixa",
                 data: data.closePrices.map((value, index) => {
-                  const macdPoint = macdCrossPoints.filter(p => p.type === 'down').find(p => p.label === labels[index])
-                  return macdPoint ? macdPoint.value : null
+                  const macdPoint = data.macdCrossPoints.find(p => p.type === 'down' && p.date === data.dates[index]);
+                  return macdPoint ? macdPoint.value : null;
                 }),
                 backgroundColor: '#e74c3c',
                 borderColor: '#e74c3c',
@@ -693,82 +652,39 @@
       } else {
         dateSpan.textContent = '';
       }
-      
-      // Pega os valores do dia selecionado
-      const currentPrice = data.closePrices[index];
-      const currentSMA50 = data.sma50[index];
-      const currentSMA200 = data.sma200[index];
-      const currentRSI = data.rsi[index];
-      const currentMACD = data.macd[index];
-      
-      // Pega os valores do dia anterior para comparação
-      const prevPrice = data.closePrices[index - 1];
-      const prevSMA50 = data.sma50[index - 1];
-      const prevSMA200 = data.sma200[index - 1];
-      const prevRSI = data.rsi[index - 1];
-      const prevMACD = data.macd[index - 1];
 
+      const analysis = data.analysis[index];
       let html = '';
 
       // Análise Preço vs MAs
-      const priceVsSMA200 = currentPrice > currentSMA200;
-      const priceVsSMA50 = currentPrice > currentSMA50;
       html += `
         <div class="indicator-status">
           <span class="indicator-name">Preço vs MAs:</span>
-          <span class="indicator-value">R$ ${currentPrice.toFixed(2)}</span>
-          ${priceVsSMA200 ? 
-            '<span class="signal-entry">Acima da MA200 (Entrada)</span>' : 
-            '<span class="signal-exit">Abaixo da MA200 (Saída)</span>'}
+          <span class="indicator-value">R$ ${analysis.price.value.toFixed(2)}</span>
+          <span class="signal-${analysis.price.signal}">${analysis.price.message}</span>
         </div>`;
 
       // Análise RSI
-      let rsiSignal = '<span class="signal-neutral">Neutro</span>';
-      if (currentRSI > 70) {
-        rsiSignal = '<span class="signal-exit">Sobrecomprado (Saída)</span>';
-      } else if (currentRSI < 30) {
-        rsiSignal = '<span class="signal-entry">Sobrevendido (Entrada)</span>';
-      }
       html += `
         <div class="indicator-status">
           <span class="indicator-name">RSI:</span>
-          <span class="indicator-value">${currentRSI.toFixed(2)}</span>
-          ${rsiSignal}
+          <span class="indicator-value">${analysis.rsi.value.toFixed(2)}</span>
+          <span class="signal-${analysis.rsi.signal}">${analysis.rsi.message}</span>
         </div>`;
 
       // Análise MACD
-      function getMacdSignal(currentMACD, prevMACD) {
-        if (currentMACD > 0 && prevMACD < 0) {
-          return '<span class="signal-entry">MACD cruza acima da linha de sinal (Tendência de alta)</span>';
-        } else if (currentMACD < 0 && prevMACD > 0) {
-          return '<span class="signal-exit">MACD cruza abaixo da linha de sinal (Tendência de baixa)</span>';
-        }
-        return '<span class="signal-neutral">Sem sinal</span>';
-      }
       html += `
         <div class="indicator-status">
           <span class="indicator-name">MACD:</span>
-          <span class="indicator-value">${currentMACD.toFixed(2)}</span>
-          ${getMacdSignal(currentMACD, prevMACD)}
+          <span class="indicator-value">${analysis.macd.value.toFixed(2)}</span>
+          <span class="signal-${analysis.macd.signal}">${analysis.macd.message}</span>
         </div>`;
 
       // Análise Cruzamento MAs
-      const currentCross = currentSMA50 > currentSMA200;
-      const prevCross = prevSMA50 > prevSMA200;
-      let crossSignal = '<span class="signal-neutral">Sem Cruzamento</span>';
-      if (currentCross && !prevCross) {
-        crossSignal = '<span class="signal-entry">Golden Cross (Entrada)</span>';
-      } else if (!currentCross && prevCross) {
-        crossSignal = '<span class="signal-exit">Death Cross (Saída)</span>';
-      } else if (currentCross) {
-        crossSignal = '<span class="signal-entry">MA50 acima da MA200</span>';
-      } else {
-        crossSignal = '<span class="signal-exit">MA50 abaixo da MA200</span>';
-      }
       html += `
         <div class="indicator-status">
           <span class="indicator-name">Cruzamento MAs:</span>
-          ${crossSignal}
+          <span class="signal-${analysis.cross.signal}">${analysis.cross.message}</span>
         </div>`;
 
       analysisDiv.innerHTML = html;
