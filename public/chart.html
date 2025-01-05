@@ -264,6 +264,25 @@
       color: #7f8c8d;
       font-weight: bold;
     }
+
+    .toggle-button {
+      padding: 8px 16px;
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+      margin-left: 15px;
+    }
+    .toggle-button:hover {
+      background: #f0f0f0;
+    }
+    .toggle-button.active {
+      background: #2980b9;
+      color: white;
+      border-color: #2980b9;
+    }
   </style>
 </head>
 <body>
@@ -284,6 +303,7 @@
         <button class="period-button" data-period="1Y">1Y</button>
         <button class="period-button" data-period="5Y">5Y</button>
         <button class="period-button" data-period="ALL">ALL</button>
+        <button id="toggleMacd" class="toggle-button">Mostrar MACD</button>
       </div>
 
       <div class="error-message" id="errorMessage"></div>
@@ -427,6 +447,14 @@
 
   <script>
     let currentChart = null;
+    let showMacd = false;
+
+    document.getElementById('toggleMacd').addEventListener('click', function() {
+      this.classList.toggle('active');
+      showMacd = !showMacd;
+      this.textContent = showMacd ? 'Ocultar MACD' : 'Mostrar MACD';
+      fetchAndPlot(document.querySelector('.period-button.active').dataset.period);
+    });
 
     async function fetchAndPlot(period = '3M') {
       const ticker = window.location.pathname.substring(1);
@@ -451,128 +479,134 @@
           currentChart.destroy();
         }
 
+        const datasets = [
+          {
+            label: "Preço de Fechamento",
+            data: data.closePrices,
+            borderColor: "rgb(255, 82, 82)",
+            backgroundColor: "rgba(255, 82, 82, 0.1)",
+            borderWidth: 1,
+            fill: true,
+            yAxisID: 'y',
+            order: 1,
+            pointRadius: 0,
+            tension: 0.1
+          },
+          {
+            label: '50 MA',
+            data: data.sma50,
+            borderColor: "green",
+            borderWidth: 1,
+            fill: false,
+            yAxisID: 'y',
+            order: 2,
+            pointRadius: 0
+          },
+          {
+            label: '200 MA',
+            data: data.sma200,
+            borderColor: "orange",
+            borderWidth: 1,
+            fill: false,
+            yAxisID: 'y',
+            order: 3,
+            pointRadius: 0
+          },
+          {
+            label: "RSI",
+            data: data.rsi,
+            borderColor: "purple",
+            borderWidth: 1,
+            fill: false,
+            yAxisID: 'y1',
+            order: 4,
+            pointRadius: 0
+          }
+        ];
+
+        if (showMacd) {
+          datasets.push({
+            label: "MACD",
+            data: data.macd,
+            borderColor: "red",
+            borderWidth: 1,
+            fill: false,
+            yAxisID: 'y',
+            order: 5,
+            pointRadius: 0
+          });
+        }
+
+        // Adiciona os pontos de cruzamento
+        datasets.push(
+          {
+            label: "Death Cross",
+            data: data.closePrices.map((value, index) => {
+              const crossPoint = data.crossPoints.find(p => p.type === 'death' && p.date === data.dates[index]);
+              return crossPoint ? crossPoint.value : null;
+            }),
+            backgroundColor: '#FF0000',
+            borderColor: '#FF0000',
+            pointStyle: 'star',
+            pointRadius: 15,
+            pointHoverRadius: 20,
+            showLine: false,
+            yAxisID: 'y',
+            order: 0
+          },
+          {
+            label: "Golden Cross",
+            data: data.closePrices.map((value, index) => {
+              const crossPoint = data.crossPoints.find(p => p.type === 'golden' && p.date === data.dates[index]);
+              return crossPoint ? crossPoint.value : null;
+            }),
+            backgroundColor: '#FFD700',
+            borderColor: '#FFD700',
+            pointStyle: 'star',
+            pointRadius: 15,
+            pointHoverRadius: 20,
+            showLine: false,
+            yAxisID: 'y',
+            order: 0
+          },
+          {
+            label: "MACD Cruzamento Alta",
+            data: data.closePrices.map((value, index) => {
+              const macdPoint = data.macdCrossPoints.find(p => p.type === 'up' && p.date === data.dates[index]);
+              return macdPoint ? macdPoint.value : null;
+            }),
+            backgroundColor: '#2ecc71',
+            borderColor: '#2ecc71',
+            pointStyle: 'triangle',
+            pointRadius: 12,
+            pointHoverRadius: 15,
+            rotation: 0,
+            showLine: false,
+            yAxisID: 'y',
+            order: 0
+          },
+          {
+            label: "MACD Cruzamento Baixa",
+            data: data.closePrices.map((value, index) => {
+              const macdPoint = data.macdCrossPoints.find(p => p.type === 'down' && p.date === data.dates[index]);
+              return macdPoint ? macdPoint.value : null;
+            }),
+            backgroundColor: '#e74c3c',
+            borderColor: '#e74c3c',
+            pointStyle: 'triangle',
+            pointRadius: 12,
+            pointHoverRadius: 15,
+            rotation: 180,
+            showLine: false,
+            yAxisID: 'y',
+            order: 0
+          }
+        );
+
         const ctx = document.getElementById("chart").getContext("2d");
         currentChart = new Chart(ctx, {
           type: "line",
-          data: {
-            labels,
-            datasets: [
-              {
-                label: "MACD (Linha Principal)",
-                data: data.macd,
-                borderColor: "red",
-                borderWidth: 1,
-                fill: false,
-                yAxisID: 'y',
-                order: 5,
-                pointRadius: 0
-              },
-              {
-                label: "RSI",
-                data: data.rsi,
-                borderColor: "purple",
-                borderWidth: 1,
-                fill: false,
-                yAxisID: 'y1',
-                order: 4,
-                pointRadius: 0
-              },
-              {
-                label: '200 MA',
-                data: data.sma200,
-                borderColor: "orange",
-                borderWidth: 1,
-                fill: false,
-                yAxisID: 'y',
-                order: 3,
-                pointRadius: 0
-              },
-              {
-                label: '50 MA',
-                data: data.sma50,
-                borderColor: "green",
-                borderWidth: 1,
-                fill: false,
-                yAxisID: 'y',
-                order: 2,
-                pointRadius: 0
-              },
-              {
-                label: "Preço de Fechamento",
-                data: data.closePrices,
-                borderColor: "rgb(255, 82, 82)",
-                backgroundColor: "rgba(255, 82, 82, 0.1)",
-                borderWidth: 1,
-                fill: true,
-                yAxisID: 'y',
-                order: 1,
-                pointRadius: 0,
-                tension: 0.1
-              },
-              {
-                label: "Death Cross",
-                data: data.closePrices.map((value, index) => {
-                  const crossPoint = data.crossPoints.find(p => p.type === 'death' && p.date === data.dates[index]);
-                  return crossPoint ? crossPoint.value : null;
-                }),
-                backgroundColor: '#FF0000',
-                borderColor: '#FF0000',
-                pointStyle: 'star',
-                pointRadius: 15,
-                pointHoverRadius: 20,
-                showLine: false,
-                yAxisID: 'y',
-                order: 0
-              },
-              {
-                label: "Golden Cross",
-                data: data.closePrices.map((value, index) => {
-                  const crossPoint = data.crossPoints.find(p => p.type === 'golden' && p.date === data.dates[index]);
-                  return crossPoint ? crossPoint.value : null;
-                }),
-                backgroundColor: '#FFD700',
-                borderColor: '#FFD700',
-                pointStyle: 'star',
-                pointRadius: 15,
-                pointHoverRadius: 20,
-                showLine: false,
-                yAxisID: 'y',
-                order: 0
-              },
-              {
-                label: "MACD Cruzamento Alta",
-                data: data.closePrices.map((value, index) => {
-                  const macdPoint = data.macdCrossPoints.find(p => p.type === 'up' && p.date === data.dates[index]);
-                  return macdPoint ? macdPoint.value : null;
-                }),
-                backgroundColor: '#2ecc71',
-                borderColor: '#2ecc71',
-                pointStyle: 'triangle',
-                pointRadius: 12,
-                pointHoverRadius: 15,
-                rotation: 0,
-                showLine: false,
-                yAxisID: 'y',
-                order: 0
-              },
-              {
-                label: "MACD Cruzamento Baixa",
-                data: data.closePrices.map((value, index) => {
-                  const macdPoint = data.macdCrossPoints.find(p => p.type === 'down' && p.date === data.dates[index]);
-                  return macdPoint ? macdPoint.value : null;
-                }),
-                backgroundColor: '#e74c3c',
-                borderColor: '#e74c3c',
-                pointStyle: 'triangle',
-                pointRadius: 12,
-                pointHoverRadius: 15,
-                rotation: 180,
-                showLine: false,
-                yAxisID: 'y',
-                order: 0
-              }
-            ],
-          },
+          data: { labels, datasets },
           options: {
             responsive: true,
             interaction: {
