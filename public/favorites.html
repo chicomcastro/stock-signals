@@ -24,15 +24,25 @@
     .favorites-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-      gap: 20px;
+      gap: 60px 20px;
       margin-top: 20px;
     }
+
+    @media (max-width: 768px) {
+      .favorites-grid {
+        gap: 60px;
+      }
+    }
+
     .favorite-card {
       background-color: #fff;
       border-radius: 8px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       padding: 20px;
       transition: transform 0.2s;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
     }
     .favorite-card:hover {
       transform: translateY(-5px);
@@ -64,6 +74,7 @@
     }
     .favorite-info {
       margin-bottom: 15px;
+      flex: 1;
     }
     .info-row {
       display: flex;
@@ -100,8 +111,11 @@
       color: white;
       text-decoration: none;
       border-radius: 4px;
-      margin-top: 10px;
+      margin-top: auto;
       transition: background-color 0.2s;
+      width: 100%;
+      text-align: center;
+      box-sizing: border-box;
     }
     .chart-link:hover {
       background-color: #2471a3;
@@ -113,11 +127,96 @@
       border-radius: 8px;
       color: #7f8c8d;
     }
+    
+    .add-favorite-form {
+      background-color: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    
+    .add-favorite-form h3 {
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: #2c3e50;
+    }
+    
+    .add-favorite-form form {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .add-favorite-form input {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .add-favorite-form button:hover {
+      background-color: #2471a3;
+    }
+
+    /* Skeleton Loading Styles */
+    @keyframes shimmer {
+      0% {
+        background-position: -1000px 0;
+      }
+      100% {
+        background-position: 1000px 0;
+      }
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 1000px 100%;
+      animation: shimmer 2s infinite linear;
+    }
+
+    .skeleton-card {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .skeleton-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .skeleton-title {
+      height: 24px;
+      width: 120px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+
+    .skeleton-row {
+      height: 20px;
+      border-radius: 4px;
+      margin: 0;
+    }
+
+    .skeleton-button {
+      height: 36px;
+      width: 100%;
+      border-radius: 4px;
+      margin-top: auto;
+    }
   </style>
 </head>
 <body>
   <a href="/" class="back-link">← Voltar para a lista de ações</a>
   <h1>Meus Favoritos</h1>
+
+  <div class="add-favorite-form">
+    <h3>Adicionar Novo Ativo</h3>
+    <form onsubmit="addNewFavorite(event)">
+      <input type="text" id="newTickerInput" placeholder="Código do ativo (ex: PETR4)" required pattern="[A-Za-z0-9]{4,6}" style="padding: 8px; margin-right: 8px; border: 1px solid #ddd; border-radius: 4px;">
+      <button type="submit" style="padding: 8px 16px; background-color: #2980b9; color: white; border: none; border-radius: 4px; cursor: pointer;">Adicionar</button>
+    </form>
+  </div>
 
   <div id="favorites-container">
     <div class="no-favorites">
@@ -127,6 +226,55 @@
   </div>
 
   <script>
+    // Função para adicionar novo favorito
+    async function addNewFavorite(event) {
+      event.preventDefault();
+      const ticker = document.getElementById('newTickerInput').value.toUpperCase();
+      
+      try {
+        // Tenta buscar os dados do ativo para verificar se existe
+        const response = await fetch(`/data/${ticker}?period=1M`);
+        const data = await response.json();
+        
+        if (data.error) {
+          alert('Ativo não encontrado. Verifique o código e tente novamente.');
+          return;
+        }
+        
+        const favorites = JSON.parse(localStorage.getItem('stockFavorites')) || {};
+        favorites[ticker] = ticker;
+        localStorage.setItem('stockFavorites', JSON.stringify(favorites));
+        
+        // Limpa o formulário
+        document.getElementById('newTickerInput').value = '';
+        
+        // Recarrega a lista de favoritos
+        loadFavorites();
+      } catch (error) {
+        alert('Erro ao adicionar ativo. Verifique o código e tente novamente.');
+        console.error('Erro:', error);
+      }
+    }
+
+    // Função para criar um card skeleton
+    function createSkeletonCard() {
+      return `
+        <div class="skeleton-card">
+          <div class="skeleton skeleton-title"></div>
+          <div class="skeleton-content">
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+          </div>
+          <div class="skeleton skeleton-button"></div>
+        </div>
+      `;
+    }
+
     async function loadFavorites() {
       const favorites = JSON.parse(localStorage.getItem('stockFavorites')) || {};
       const container = document.getElementById('favorites-container');
@@ -135,46 +283,51 @@
         return; // Mantém a mensagem de "nenhum favorito"
       }
 
-      // Limpa o container
+      // Limpa o container e adiciona a grade
       container.innerHTML = '<div class="favorites-grid"></div>';
       const grid = container.querySelector('.favorites-grid');
       
-      // Para cada favorito, busca os dados e cria o card
-      for (const [ticker, name] of Object.entries(favorites)) {
+      // Adiciona skeletons para cada favorito
+      Object.keys(favorites).forEach(() => {
+        const skeletonWrapper = document.createElement('div');
+        skeletonWrapper.className = 'favorite-card';
+        skeletonWrapper.innerHTML = createSkeletonCard();
+        grid.appendChild(skeletonWrapper);
+      });
+      
+      // Para cada favorito, busca os dados e atualiza o card
+      const updatePromises = Object.keys(favorites).map(async (ticker, index) => {
         try {
           const response = await fetch(`/data/${ticker}?period=3M`);
           const data = await response.json();
           
           if (data.error) {
             console.error(`Erro ao carregar dados para ${ticker}:`, data.error);
-            continue;
+            return;
           }
 
           // Pega o último índice dos dados
           const lastIndex = data.closePrices.length - 1;
           const analysis = data.analysis[lastIndex];
           
-          // Calcula a variação percentual para 1D
+          // Calcula as variações
           const currentPrice = data.closePrices[lastIndex];
           const previousPrice = data.closePrices[lastIndex - 1];
           const priceChange = ((currentPrice - previousPrice) / previousPrice) * 100;
 
-          // Calcula a variação percentual para 7D
           const currentPrice7D = data.closePrices[lastIndex - 7];
           const previousPrice7D = data.closePrices[lastIndex - 8];
           const priceChange7D = ((currentPrice7D - previousPrice7D) / previousPrice7D) * 100;
 
-          // Calcula a variação percentual para 1M
           const currentPrice1M = data.closePrices[lastIndex - 20];
           const previousPrice1M = data.closePrices[lastIndex - 21];
           const priceChange1M = ((currentPrice1M - previousPrice1M) / previousPrice1M) * 100;
           
-          // Cria o card do favorito
-          const card = document.createElement('div');
-          card.className = 'favorite-card';
-          card.innerHTML = `
+          // Atualiza o card com os dados reais
+          const cards = grid.querySelectorAll('.favorite-card');
+          cards[index].innerHTML = `
             <div class="favorite-header">
-              <h2 class="favorite-title">${ticker} - ${name}</h2>
+              <h2 class="favorite-title">${ticker}</h2>
               <button class="favorite-btn" onclick="removeFavorite('${ticker}')">★</button>
             </div>
             <div class="favorite-info">
@@ -215,12 +368,13 @@
             </div>
             <a href="/${ticker}" class="chart-link">Ver Gráfico Detalhado →</a>
           `;
-          
-          grid.appendChild(card);
         } catch (error) {
           console.error(`Erro ao carregar dados para ${ticker}:`, error);
         }
-      }
+      });
+
+      // Aguarda todos os cards serem atualizados
+      await Promise.all(updatePromises);
     }
 
     function removeFavorite(ticker) {
