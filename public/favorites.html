@@ -204,6 +204,103 @@
       border-radius: 4px;
       margin-top: auto;
     }
+
+    /* View Toggle Button */
+    .view-toggle {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 20px;
+      gap: 10px;
+    }
+
+    .view-toggle button {
+      padding: 8px 16px;
+      background-color: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .view-toggle button.active {
+      background-color: #2980b9;
+      color: white;
+      border-color: #2980b9;
+    }
+
+    /* List View Styles */
+    .favorites-list {
+      display: none;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .favorites-list .favorite-card {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      padding: 15px;
+      gap: 20px;
+    }
+
+    .favorites-list .favorite-header {
+      width: 120px;
+      margin-bottom: 0;
+    }
+
+    .favorites-list .favorite-info {
+      display: flex;
+      flex: 1;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 0;
+    }
+
+    .favorites-list .info-row {
+      flex: 0 0 auto;
+      margin: 0;
+      padding: 0;
+      border: none;
+      min-width: 150px;
+    }
+
+    .favorites-list .chart-link {
+      width: auto;
+      margin: 0;
+      white-space: nowrap;
+    }
+
+    /* Show active view */
+    .view-grid .favorites-grid {
+      display: grid;
+    }
+
+    .view-grid .favorites-list {
+      display: none;
+    }
+
+    .view-list .favorites-grid {
+      display: none;
+    }
+
+    .view-list .favorites-list {
+      display: flex;
+    }
+
+    @media (max-width: 768px) {
+      .favorites-list .favorite-card {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .favorites-list .favorite-header {
+        width: auto;
+      }
+
+      .favorites-list .chart-link {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
@@ -218,7 +315,12 @@
     </form>
   </div>
 
-  <div id="favorites-container">
+  <div class="view-toggle">
+    <button onclick="toggleView('grid')" class="active" data-view="grid">Grade</button>
+    <button onclick="toggleView('list')" data-view="list">Lista</button>
+  </div>
+
+  <div id="favorites-container" class="view-grid">
     <div class="no-favorites">
       Você ainda não tem nenhum ativo favorito.
       Navegue pelos ativos e clique na estrela para adicionar aos favoritos.
@@ -275,27 +377,56 @@
       `;
     }
 
+    function toggleView(view) {
+      const container = document.getElementById('favorites-container');
+      const buttons = document.querySelectorAll('.view-toggle button');
+      
+      // Update container class
+      container.className = `view-${view}`;
+      
+      // Update button states
+      buttons.forEach(button => {
+        button.classList.toggle('active', button.dataset.view === view);
+      });
+    }
+
     async function loadFavorites() {
       const favorites = JSON.parse(localStorage.getItem('stockFavorites')) || {};
       const container = document.getElementById('favorites-container');
       
       if (Object.keys(favorites).length === 0) {
-        return; // Mantém a mensagem de "nenhum favorito"
+        container.innerHTML = `
+          <div class="no-favorites">
+            Você ainda não tem nenhum ativo favorito.
+            Navegue pelos ativos e clique na estrela para adicionar aos favoritos.
+          </div>
+        `;
+        return;
       }
 
-      // Limpa o container e adiciona a grade
-      container.innerHTML = '<div class="favorites-grid"></div>';
-      const grid = container.querySelector('.favorites-grid');
+      // Create both grid and list containers
+      container.innerHTML = `
+        <div class="favorites-grid"></div>
+        <div class="favorites-list"></div>
+      `;
       
-      // Adiciona skeletons para cada favorito
+      const grid = container.querySelector('.favorites-grid');
+      const list = container.querySelector('.favorites-list');
+      
+      // Add skeletons for each favorite
       Object.keys(favorites).forEach(() => {
-        const skeletonWrapper = document.createElement('div');
-        skeletonWrapper.className = 'favorite-card';
-        skeletonWrapper.innerHTML = createSkeletonCard();
-        grid.appendChild(skeletonWrapper);
+        const gridSkeleton = document.createElement('div');
+        gridSkeleton.className = 'favorite-card';
+        gridSkeleton.innerHTML = createSkeletonCard();
+        grid.appendChild(gridSkeleton);
+
+        const listSkeleton = document.createElement('div');
+        listSkeleton.className = 'favorite-card';
+        listSkeleton.innerHTML = createSkeletonCard();
+        list.appendChild(listSkeleton);
       });
       
-      // Para cada favorito, busca os dados e atualiza o card
+      // Update cards with real data
       const updatePromises = Object.keys(favorites).map(async (ticker, index) => {
         try {
           const response = await fetch(`/data/${ticker}?period=3M`);
@@ -323,9 +454,8 @@
           const previousPrice1M = data.closePrices[lastIndex - 21];
           const priceChange1M = ((currentPrice1M - previousPrice1M) / previousPrice1M) * 100;
           
-          // Atualiza o card com os dados reais
-          const cards = grid.querySelectorAll('.favorite-card');
-          cards[index].innerHTML = `
+          // Create card content
+          const cardContent = `
             <div class="favorite-header">
               <h2 class="favorite-title">${ticker}</h2>
               <button class="favorite-btn" onclick="removeFavorite('${ticker}')">★</button>
@@ -368,12 +498,17 @@
             </div>
             <a href="/${ticker}" class="chart-link">Ver Gráfico Detalhado →</a>
           `;
+
+          // Update both grid and list cards
+          const gridCards = grid.querySelectorAll('.favorite-card');
+          const listCards = list.querySelectorAll('.favorite-card');
+          gridCards[index].innerHTML = cardContent;
+          listCards[index].innerHTML = cardContent;
         } catch (error) {
           console.error(`Erro ao carregar dados para ${ticker}:`, error);
         }
       });
 
-      // Aguarda todos os cards serem atualizados
       await Promise.all(updatePromises);
     }
 
