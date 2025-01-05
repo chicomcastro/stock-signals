@@ -37,17 +37,19 @@ function getDateRange(period, includeExtraHistory = false) {
       return { period1: "2000-01-01" };
   }
 
-  // Se precisamos de dados extras para as médias móveis, adiciona 200 dias
+  // Se precisamos de dados extras para os indicadores, adiciona períodos extras
   if (includeExtraHistory) {
-    const back200Days = new Date(date.getTime() - 2 * 200 * 24 * 60 * 60 * 1000);
-    return { period1: back200Days };
+    // Adiciona 200 dias para SMA200 + 26 dias para MACD + 14 dias para RSI
+    const extraDays = 2 * Math.max(200, 26 + 9, 14);
+    const backExtraDays = new Date(date.getTime() - (extraDays * 24 * 60 * 60 * 1000));
+    return { period1: backExtraDays };
   }
 
   return { period1: date };
 }
 
 async function fetchHistoricalData(ticker, period = "3M") {
-  // Primeiro, busca dados extras para calcular as médias móveis
+  // Primeiro, busca dados extras para calcular os indicadores
   const extraDateRange = getDateRange(period, true);
   const historicalDataExtra = await yahooFinance.historical(ticker, {
     ...extraDateRange,
@@ -65,28 +67,38 @@ async function fetchHistoricalData(ticker, period = "3M") {
   // Filtra os dados para o período solicitado
   const historicalData = historicalDataExtra.filter(data => new Date(data.date) >= startDate);
 
-  // Calcula as médias móveis com todos os dados disponíveis
+  // Calcula todos os indicadores usando o dataset completo
   const allClosePrices = historicalDataExtra.map((data) => data.close);
-  const sma50Values = SMA.calculate({ period: 50, values: allClosePrices }).slice(allClosePrices.length - historicalData.length - 49);
-  const sma200Values = SMA.calculate({ period: 200, values: allClosePrices }).slice(allClosePrices.length - historicalData.length - 199);
-
-  // Calcula RSI e MACD com todos os dados disponíveis
-  const allRsi = (() => {
-    const rsi = RSI.calculate({ 
-      period: 14, 
-      values: allClosePrices,
-    });
-    return rsi.slice(rsi.length - historicalData.length);
-  })();
-
-  const allMacd = MACD.calculate({
+  
+  // Calcula as médias móveis
+  const allSma50Values = SMA.calculate({ period: 50, values: allClosePrices });
+  const allSma200Values = SMA.calculate({ period: 200, values: allClosePrices });
+  
+  // Calcula RSI
+  const allRsiValues = RSI.calculate({ 
+    period: 14, 
+    values: allClosePrices,
+  });
+  console.log('allClosePrices', allClosePrices, allClosePrices.length)
+  console.log('historicalData', historicalData.map((data) => data.close), historicalData.length)
+  console.log('allRsiValues', allRsiValues, allRsiValues.length)
+  
+  // Calcula MACD
+  const allMacdValues = MACD.calculate({
     values: allClosePrices,
     fastPeriod: 12,
     slowPeriod: 26,
     signalPeriod: 9,
     SimpleMAOscillator: false,
     SimpleMASignal: false,
-  }).slice(allClosePrices.length - historicalData.length - 25);
+  });
+
+  // Pega apenas os valores correspondentes ao período solicitado
+  const offset = allClosePrices.length - historicalData.length;
+  const sma50Values = allSma50Values.slice(offset - 49);
+  const sma200Values = allSma200Values.slice(offset - 199);
+  const rsiValues = allRsiValues.slice(offset - 14);
+  const macdValues = allMacdValues.slice(offset - 25);
 
   const closePrices = historicalData.map((data) => data.close);
   const dates = historicalData.map((data) => data.date);
@@ -96,8 +108,8 @@ async function fetchHistoricalData(ticker, period = "3M") {
     closePrices,
     sma50: sma50Values,
     sma200: sma200Values,
-    rsi: allRsi,
-    macd: allMacd.map(m => m.MACD),
+    rsi: rsiValues,
+    macd: macdValues.map(m => m.MACD),
   };
 }
 
