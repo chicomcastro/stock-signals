@@ -61,6 +61,11 @@
       color: #2c3e50;
       margin: 0;
     }
+    .favorite-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
     .favorite-btn {
       background: none;
       border: none;
@@ -106,17 +111,15 @@
       font-weight: bold;
     }
     .chart-link {
-      display: inline-block;
-      padding: 8px 16px;
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
       background-color: #2980b9;
       color: white;
       text-decoration: none;
       border-radius: 4px;
-      margin-top: auto;
       transition: background-color 0.2s;
-      width: 100%;
-      text-align: center;
-      box-sizing: border-box;
+      font-size: 0.9em;
     }
     .chart-link:hover {
       background-color: #2471a3;
@@ -245,8 +248,12 @@
     }
 
     .favorites-list .favorite-header {
-      width: 120px;
-      margin-bottom: 0;
+      width: auto;
+      min-width: 200px;
+    }
+
+    .favorites-list .favorite-header-actions {
+      flex-direction: row;
     }
 
     .favorites-list .favorite-info {
@@ -295,11 +302,12 @@
       }
 
       .favorites-list .favorite-header {
-        width: auto;
+        width: 100%;
       }
 
       .favorites-list .chart-link {
-        width: 100%;
+        font-size: 0.85em;
+        padding: 4px 8px;
       }
     }
 
@@ -482,7 +490,10 @@
           const cardContent = `
             <div class="favorite-header">
               <h2 class="favorite-title">${ticker}</h2>
-              <button class="favorite-btn" onclick="removeFavorite('${ticker}')">★</button>
+              <div class="favorite-header-actions">
+                <button class="favorite-btn" onclick="removeFavorite('${ticker}')">★</button>
+                <a href="/${ticker}" class="chart-link">Ver Gráfico Detalhado →</a>
+              </div>
             </div>
             <div class="favorite-info">
               <div class="info-row">
@@ -525,7 +536,6 @@
                 <canvas id="canvas-${ticker}"></canvas>
               </div>
             </div>
-            <a href="/${ticker}" class="chart-link">Ver Gráfico Detalhado →</a>
           `;
 
           // Update both grid and list cards
