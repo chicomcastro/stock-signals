@@ -439,6 +439,27 @@
           }
         }
 
+        // Identificar pontos de cruzamento do MACD com zero
+        const macdCrossPoints = [];
+        let lastMacdState = null;
+        
+        for (let i = 1; i < data.macd.length; i++) {
+          const currentMacd = data.macd[i];
+          const prevMacd = data.macd[i - 1];
+          
+          if (prevMacd !== null && currentMacd !== null) {
+            // Verifica se houve cruzamento (mudança de sinal)
+            if ((prevMacd < 0 && currentMacd >= 0) || (prevMacd > 0 && currentMacd <= 0)) {
+              macdCrossPoints.push({
+                index: i,
+                type: prevMacd < 0 ? 'up' : 'down',
+                value: data.closePrices[i],
+                label: labels[i]
+              });
+            }
+          }
+        }
+
         if (currentChart) {
           currentChart.destroy();
         }
@@ -530,6 +551,38 @@
                 showLine: false,
                 yAxisID: 'y',
                 order: 0
+              },
+              {
+                label: "MACD Cruzamento Alta",
+                data: data.closePrices.map((value, index) => {
+                  const macdPoint = macdCrossPoints.filter(p => p.type === 'up').find(p => p.label === labels[index])
+                  return macdPoint ? macdPoint.value : null
+                }),
+                backgroundColor: '#2ecc71',
+                borderColor: '#2ecc71',
+                pointStyle: 'triangle',
+                pointRadius: 12,
+                pointHoverRadius: 15,
+                rotation: 0,
+                showLine: false,
+                yAxisID: 'y',
+                order: 0
+              },
+              {
+                label: "MACD Cruzamento Baixa",
+                data: data.closePrices.map((value, index) => {
+                  const macdPoint = macdCrossPoints.filter(p => p.type === 'down').find(p => p.label === labels[index])
+                  return macdPoint ? macdPoint.value : null
+                }),
+                backgroundColor: '#e74c3c',
+                borderColor: '#e74c3c',
+                pointStyle: 'triangle',
+                pointRadius: 12,
+                pointHoverRadius: 15,
+                rotation: 180,
+                showLine: false,
+                yAxisID: 'y',
+                order: 0
               }
             ],
           },
@@ -581,6 +634,12 @@
                     }
                     if (label === "Death Cross") {
                       return "Death Cross: Sinal de VENDA - MA50 cruzou abaixo da MA200";
+                    }
+                    if (label === "MACD Cruzamento Alta") {
+                      return "MACD: Sinal de COMPRA - Cruzou linha zero de baixo para cima";
+                    }
+                    if (label === "MACD Cruzamento Baixa") {
+                      return "MACD: Sinal de VENDA - Cruzou linha zero de cima para baixo";
                     }
                     if (label === "RSI") {
                       return `${label}: ${value.toFixed(2)} (Sobrecompra > 70, Sobrevenda < 30)`;
