@@ -31,12 +31,42 @@
       color: #2c3e50;
       margin-bottom: 10px;
     }
-    a {
+    .stock-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .stock-link {
       color: #2980b9;
       text-decoration: none;
+      display: block;
     }
-    a:hover {
+    .stock-link:hover {
       text-decoration: underline;
+    }
+    .favorite-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.2em;
+      padding: 4px;
+      transition: transform 0.2s;
+    }
+    .favorite-btn:hover {
+      transform: scale(1.2);
+    }
+    .favorite-btn.active {
+      color: #f1c40f;
+    }
+    #favorites-category {
+      background-color: #fff3cd;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    #favorites-category.has-favorites {
+      display: block;
     }
     .framework {
       margin-top: 40px;
@@ -80,68 +110,75 @@
   <h1>Análise de Ativos</h1>
   <p>Para visualizar o gráfico de um ativo, acesse a URL com o código do ativo desejado.</p>
   
+  <div id="favorites-category" class="stock-category">
+    <h3>⭐ Favoritos</h3>
+    <div id="favorites-grid" class="stocks-grid">
+      <!-- Favoritos serão inseridos aqui dinamicamente -->
+    </div>
+  </div>
+
   <div class="example">
     <div class="stock-category">
       <h3>🏦 Bancos</h3>
       <div class="stocks-grid">
-        <a href="/ITUB4">ITUB4 - Itaú Unibanco PN</a>
-        <a href="/BBDC4">BBDC4 - Bradesco PN</a>
-        <a href="/BBAS3">BBAS3 - Banco do Brasil ON</a>
-        <a href="/SANB11">SANB11 - Santander Units</a>
+        <a href="/ITUB4" class="stock-link">ITUB4 - Itaú Unibanco PN</a>
+        <a href="/BBDC4" class="stock-link">BBDC4 - Bradesco PN</a>
+        <a href="/BBAS3" class="stock-link">BBAS3 - Banco do Brasil ON</a>
+        <a href="/SANB11" class="stock-link">SANB11 - Santander Units</a>
       </div>
     </div>
 
     <div class="stock-category">
       <h3>🛢️ Commodities</h3>
       <div class="stocks-grid">
-        <a href="/PETR4">PETR4 - Petrobras PN</a>
-        <a href="/PETR3">PETR3 - Petrobras ON</a>
-        <a href="/VALE3">VALE3 - Vale ON</a>
-        <a href="/CSNA3">CSNA3 - CSN ON</a>
-        <a href="/GGBR4">GGBR4 - Gerdau PN</a>
+        <a href="/PETR4" class="stock-link">PETR4 - Petrobras PN</a>
+        <a href="/PETR3" class="stock-link">PETR3 - Petrobras ON</a>
+        <a href="/VALE3" class="stock-link">VALE3 - Vale ON</a>
+        <a href="/CSNA3" class="stock-link">CSNA3 - CSN ON</a>
+        <a href="/GGBR4" class="stock-link">GGBR4 - Gerdau PN</a>
       </div>
     </div>
 
     <div class="stock-category">
       <h3>🛍️ Varejo</h3>
       <div class="stocks-grid">
-        <a href="/MGLU3">MGLU3 - Magazine Luiza ON</a>
-        <a href="/VVAR3">VVAR3 - Via Varejo ON</a>
-        <a href="/AMER3">AMER3 - Americanas ON</a>
-        <a href="/LREN3">LREN3 - Lojas Renner ON</a>
+        <a href="/MGLU3" class="stock-link">MGLU3 - Magazine Luiza ON</a>
+        <a href="/VVAR3" class="stock-link">VVAR3 - Via Varejo ON</a>
+        <a href="/AMER3" class="stock-link">AMER3 - Americanas ON</a>
+        <a href="/LREN3" class="stock-link">LREN3 - Lojas Renner ON</a>
       </div>
     </div>
 
     <div class="stock-category">
       <h3>📱 Tecnologia</h3>
       <div class="stocks-grid">
-        <a href="/TOTS3">TOTS3 - Totvs ON</a>
-        <a href="/LWSA3">LWSA3 - Locaweb ON</a>
-        <a href="/CASH3">CASH3 - Méliuz ON</a>
-        <a href="/POSI3">POSI3 - Positivo ON</a>
+        <a href="/TOTS3" class="stock-link">TOTS3 - Totvs ON</a>
+        <a href="/LWSA3" class="stock-link">LWSA3 - Locaweb ON</a>
+        <a href="/CASH3" class="stock-link">CASH3 - Méliuz ON</a>
+        <a href="/POSI3" class="stock-link">POSI3 - Positivo ON</a>
       </div>
     </div>
 
     <div class="stock-category">
       <h3>🌎 BDRs</h3>
       <div class="stocks-grid">
-        <a href="/AAPL34">AAPL34 - Apple BDR</a>
-        <a href="/MSFT34">MSFT34 - Microsoft BDR</a>
-        <a href="/GOGL34">GOGL34 - Google BDR</a>
-        <a href="/AMZO34">AMZO34 - Amazon BDR</a>
-        <a href="/NFLX34">NFLX34 - Netflix BDR</a>
-        <a href="/TSLA34">TSLA34 - Tesla BDR</a>
+        <a href="/AAPL34" class="stock-link">AAPL34 - Apple BDR</a>
+        <a href="/MSFT34" class="stock-link">MSFT34 - Microsoft BDR</a>
+        <a href="/GOGL34" class="stock-link">GOGL34 - Google BDR</a>
+        <a href="/AMZO34" class="stock-link">AMZO34 - Amazon BDR</a>
+        <a href="/NFLX34" class="stock-link">NFLX34 - Netflix BDR</a>
+        <a href="/TSLA34" class="stock-link">TSLA34 - Tesla BDR</a>
       </div>
     </div>
 
     <div class="stock-category">
       <h3>📊 ETFs</h3>
       <div class="stocks-grid">
-        <a href="/BOVA11">BOVA11 - iShares Ibovespa</a>
-        <a href="/IVVB11">IVVB11 - iShares S&P 500</a>
-        <a href="/SMAL11">SMAL11 - iShares Small Cap</a>
-        <a href="/HASH11">HASH11 - ETF de Blockchain</a>
-        <a href="/TECK11">TECK11 - ETF de Tecnologia</a>
+        <a href="/BOVA11" class="stock-link">BOVA11 - iShares Ibovespa</a>
+        <a href="/IVVB11" class="stock-link">IVVB11 - iShares S&P 500</a>
+        <a href="/SMAL11" class="stock-link">SMAL11 - iShares Small Cap</a>
+        <a href="/HASH11" class="stock-link">HASH11 - ETF de Blockchain</a>
+        <a href="/TECK11" class="stock-link">TECK11 - ETF de Tecnologia</a>
       </div>
     </div>
   </div>
@@ -247,5 +284,55 @@
       <p><em>Esse framework combina a força de indicadores complementares para minimizar falsos sinais e maximizar oportunidades.</em></p>
     </div>
   </div>
+
+  <script>
+    // Função para carregar favoritos do localStorage
+    function loadFavorites() {
+      const favorites = JSON.parse(localStorage.getItem('stockFavorites')) || {};
+      const favoritesGrid = document.getElementById('favorites-grid');
+      const favoritesCategory = document.getElementById('favorites-category');
+      
+      // Limpa a grade de favoritos
+      favoritesGrid.innerHTML = '';
+      
+      // Adiciona cada favorito à grade
+      Object.entries(favorites).forEach(([ticker, name]) => {
+        const stockItem = document.createElement('div');
+        stockItem.className = 'stock-item';
+        stockItem.innerHTML = `
+          <a href="/${ticker}" class="stock-link" data-ticker="${ticker}" data-name="${name}">${ticker} - ${name}</a>
+          <button class="favorite-btn active" onclick="toggleFavorite('${ticker}', '${name}')">★</button>
+        `;
+        favoritesGrid.appendChild(stockItem);
+      });
+      
+      // Atualiza os botões de favorito em toda a página
+      document.querySelectorAll('.favorite-btn').forEach(btn => {
+        const ticker = btn.previousElementSibling.dataset.ticker;
+        btn.textContent = favorites[ticker] ? '★' : '☆';
+        btn.classList.toggle('active', favorites[ticker]);
+      });
+      
+      // Mostra ou esconde a seção de favoritos
+      favoritesCategory.classList.toggle('has-favorites', Object.keys(favorites).length > 0);
+    }
+
+    // Função para alternar favorito
+    function toggleFavorite(ticker, name) {
+      const favorites = JSON.parse(localStorage.getItem('stockFavorites')) || {};
+      
+      if (favorites[ticker]) {
+        delete favorites[ticker];
+      } else {
+        favorites[ticker] = name;
+      }
+      
+      localStorage.setItem('stockFavorites', JSON.stringify(favorites));
+      loadFavorites();
+    }
+
+    // Carrega os favoritos ao iniciar a página
+    document.addEventListener('DOMContentLoaded', loadFavorites);
+  </script>
 </body>
 </html>

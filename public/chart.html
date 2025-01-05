@@ -99,6 +99,7 @@
     .title-container {
       display: flex;
       align-items: center;
+      gap: 15px;
       margin-bottom: 20px;
     }
 
@@ -283,12 +284,28 @@
       color: white;
       border-color: #2980b9;
     }
+
+    .favorite-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.5em;
+      padding: 4px;
+      transition: transform 0.2s;
+    }
+    .favorite-btn:hover {
+      transform: scale(1.2);
+    }
+    .favorite-btn.active {
+      color: #f1c40f;
+    }
   </style>
 </head>
 <body>
   <a href="/" class="back-link">← Voltar para a lista de ações</a>
   <div class="title-container">
     <h1>Gráfico de Indicadores - {{ticker}}</h1>
+    <button id="favoriteBtn" class="favorite-btn" onclick="toggleFavorite()">☆</button>
     <a href="https://br.tradingview.com/symbols/BMFBOVESPA-{{ticker}}/" target="_blank" class="tradingview-link">
       Ver no TradingView
     </a>
@@ -448,6 +465,42 @@
   <script>
     let currentChart = null;
     let showMacd = false;
+    const currentTicker = window.location.pathname.substring(1);
+
+    // Função para carregar o estado do favorito
+    function loadFavoriteState() {
+      const favorites = JSON.parse(localStorage.getItem('stockFavorites')) || {};
+      const favoriteBtn = document.getElementById('favoriteBtn');
+      
+      if (favorites[currentTicker]) {
+        favoriteBtn.textContent = '★';
+        favoriteBtn.classList.add('active');
+      } else {
+        favoriteBtn.textContent = '☆';
+        favoriteBtn.classList.remove('active');
+      }
+    }
+
+    // Função para alternar favorito
+    function toggleFavorite() {
+      const favorites = JSON.parse(localStorage.getItem('stockFavorites')) || {};
+      const favoriteBtn = document.getElementById('favoriteBtn');
+      const tickerName = document.querySelector('h1').textContent.split(' - ')[1];
+      
+      if (favorites[currentTicker]) {
+        delete favorites[currentTicker];
+        favoriteBtn.textContent = '☆';
+        favoriteBtn.classList.remove('active');
+      } else {
+        favorites[currentTicker] = tickerName;
+        favoriteBtn.textContent = '★';
+        favoriteBtn.classList.add('active');
+      }
+      
+      localStorage.setItem('stockFavorites', JSON.stringify(favorites));
+    }
+
+    document.addEventListener('DOMContentLoaded', loadFavoriteState);
 
     document.getElementById('toggleMacd').addEventListener('click', function() {
       this.classList.toggle('active');
