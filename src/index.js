@@ -67,23 +67,26 @@ async function fetchHistoricalData(ticker, period = "3M") {
 
   // Calcula as médias móveis com todos os dados disponíveis
   const allClosePrices = historicalDataExtra.map((data) => data.close);
-  const sma50Values = SMA.calculate({ period: 50, values: allClosePrices.reverse() }).slice(0, historicalData.length).reverse();
-  const sma200Values = SMA.calculate({ period: 200, values: allClosePrices.reverse() }).slice(0, historicalData.length).reverse();
+  const sma50Values = SMA.calculate({ period: 50, values: allClosePrices }).slice(allClosePrices.length - historicalData.length - 49);
+  const sma200Values = SMA.calculate({ period: 200, values: allClosePrices }).slice(allClosePrices.length - historicalData.length - 199);
 
   // Calcula RSI e MACD com todos os dados disponíveis
-  const allRsi = RSI.calculate({ 
-    period: 14, 
-    values: allClosePrices.reverse()
-  }).slice(0, historicalData.length).reverse();
+  const allRsi = (() => {
+    const rsi = RSI.calculate({ 
+      period: 14, 
+      values: allClosePrices,
+    });
+    return rsi.slice(rsi.length - historicalData.length);
+  })();
 
   const allMacd = MACD.calculate({
-    values: allClosePrices.reverse(),
+    values: allClosePrices,
     fastPeriod: 12,
     slowPeriod: 26,
     signalPeriod: 9,
     SimpleMAOscillator: false,
     SimpleMASignal: false,
-  }).slice(0, historicalData.length).reverse();
+  }).slice(allClosePrices.length - historicalData.length - 25);
 
   const closePrices = historicalData.map((data) => data.close);
   const dates = historicalData.map((data) => data.date);
