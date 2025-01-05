@@ -79,9 +79,6 @@ async function fetchHistoricalData(ticker, period = "3M") {
     period: 14, 
     values: allClosePrices,
   });
-  console.log('allClosePrices', allClosePrices, allClosePrices.length)
-  console.log('historicalData', historicalData.map((data) => data.close), historicalData.length)
-  console.log('allRsiValues', allRsiValues, allRsiValues.length)
   
   // Calcula MACD
   const allMacdValues = MACD.calculate({
