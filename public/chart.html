@@ -79,6 +79,29 @@
       text-decoration: underline;
     }
 
+    .tradingview-link {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 15px;
+      padding: 8px 16px;
+      background-color: #2962FF;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+
+    .tradingview-link:hover {
+      background-color: #1E4BD8;
+    }
+
+    .title-container {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
     .controls {
       display: flex;
       gap: 10px;
@@ -245,7 +268,12 @@
 </head>
 <body>
   <a href="/" class="back-link">← Voltar para a lista de ações</a>
-  <h1>Gráfico de Indicadores - {{ticker}}</h1>
+  <div class="title-container">
+    <h1>Gráfico de Indicadores - {{ticker}}</h1>
+    <a href="https://br.tradingview.com/symbols/BMFBOVESPA-{{ticker}}/" target="_blank" class="tradingview-link">
+      Ver no TradingView
+    </a>
+  </div>
   
   <div class="main-container">
     <div class="chart-section">
