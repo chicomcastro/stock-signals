@@ -185,6 +185,17 @@
     .framework::-webkit-scrollbar-thumb:hover {
       background: #a8a8a8;
     }
+
+    .signal-entry {
+      color: #2ecc71;
+      font-weight: bold;
+      margin-left: 5px;
+    }
+    .signal-exit {
+      color: #e74c3c;
+      font-weight: bold;
+      margin-left: 5px;
+    }
   </style>
 </head>
 <body>
@@ -243,62 +254,59 @@
         <h3>1. Análise de Tendência Geral (50 MA e 200 MA)</h3>
         <p>Confirme a direção da tendência:</p>
         <ul>
-          <li>Preço acima da 200 MA → Tendência de alta.</li>
-          <li>Preço abaixo da 200 MA → Tendência de baixa.</li>
+          <li>Preço acima da 200 MA → Tendência de alta <span class="signal-entry">(Sinal de Entrada)</span></li>
+          <li>Preço abaixo da 200 MA → Tendência de baixa <span class="signal-exit">(Sinal de Saída)</span></li>
         </ul>
-        <p>Cruzes de médias móveis (Golden Cross e Death Cross):</p>
+        <p>Cruzes de médias móveis:</p>
         <ul>
-          <li>Golden Cross → Tendência de alta confirmada (sinal de compra).</li>
-          <li>Death Cross → Tendência de baixa confirmada (sinal de venda).</li>
+          <li>Golden Cross (50 MA cruza acima da 200 MA) → Tendência de alta confirmada <span class="signal-entry">(Sinal de Entrada)</span></li>
+          <li>Death Cross (50 MA cruza abaixo da 200 MA) → Tendência de baixa confirmada <span class="signal-exit">(Sinal de Saída)</span></li>
         </ul>
       </div>
 
       <div class="framework-section">
         <h3>2. Identificação de Força Relativa (RSI)</h3>
-        <p>Ponto de compra:</p>
+        <p>Pontos de entrada:</p>
         <ul>
-          <li>RSI abaixo de 30 e começando a subir → Potencial reversão para alta.</li>
+          <li>RSI abaixo de 30 e começando a subir → Potencial reversão para alta <span class="signal-entry">(Sinal de Entrada)</span></li>
+          <li>RSI subindo enquanto o preço cai → Divergência positiva <span class="signal-entry">(Sinal de Entrada)</span></li>
         </ul>
-        <p>Ponto de venda:</p>
+        <p>Pontos de saída:</p>
         <ul>
-          <li>RSI acima de 70 e começando a cair → Potencial reversão para baixa.</li>
-        </ul>
-        <p>Divergências:</p>
-        <ul>
-          <li>RSI subindo enquanto o preço cai → Sinal de alta (compra).</li>
-          <li>RSI caindo enquanto o preço sobe → Sinal de baixa (venda).</li>
+          <li>RSI acima de 70 e começando a cair → Potencial reversão para baixa <span class="signal-exit">(Sinal de Saída)</span></li>
+          <li>RSI caindo enquanto o preço sobe → Divergência negativa <span class="signal-exit">(Sinal de Saída)</span></li>
         </ul>
       </div>
 
       <div class="framework-section">
         <h3>3. Confirmação de Momento (MACD)</h3>
-        <p>Confirme o sinal de entrada:</p>
+        <p>Sinais de entrada:</p>
         <ul>
-          <li>MACD cruza acima da linha de sinal → Momento de alta (confirmação de compra).</li>
+          <li>MACD cruza acima da linha de sinal → Momento de alta <span class="signal-entry">(Sinal de Entrada)</span></li>
+          <li>Histograma crescente → Força na tendência de alta <span class="signal-entry">(Sinal de Entrada)</span></li>
         </ul>
-        <p>Confirme o sinal de saída:</p>
+        <p>Sinais de saída:</p>
         <ul>
-          <li>MACD cruza abaixo da linha de sinal → Momento de baixa (confirmação de venda).</li>
-          <li>Histograma crescente: Força na tendência de alta.</li>
-          <li>Histograma decrescente: Força na tendência de baixa.</li>
+          <li>MACD cruza abaixo da linha de sinal → Momento de baixa <span class="signal-exit">(Sinal de Saída)</span></li>
+          <li>Histograma decrescente → Força na tendência de baixa <span class="signal-exit">(Sinal de Saída)</span></li>
         </ul>
       </div>
 
       <div class="framework-section">
         <h3>4. Combinação dos Indicadores</h3>
-        <p>Entrada ideal (compra):</p>
+        <p>Entrada ideal (sinais combinados):</p>
         <ul>
-          <li>Preço acima da 200 MA (tendência de alta confirmada).</li>
-          <li>RSI saindo da zona de sobrevenda (abaixo de 30).</li>
-          <li>MACD cruzando acima da linha de sinal ou histograma aumentando.</li>
-          <li>Preferencialmente após um Golden Cross (50 MA acima da 200 MA).</li>
+          <li>Preço acima da 200 MA <span class="signal-entry">(Sinal de Entrada)</span></li>
+          <li>RSI saindo da zona de sobrevenda (abaixo de 30) <span class="signal-entry">(Sinal de Entrada)</span></li>
+          <li>MACD cruzando acima da linha de sinal <span class="signal-entry">(Sinal de Entrada)</span></li>
+          <li>Golden Cross recente <span class="signal-entry">(Sinal de Entrada)</span></li>
         </ul>
-        <p>Saída ideal (venda):</p>
+        <p>Saída ideal (sinais combinados):</p>
         <ul>
-          <li>Preço abaixo da 200 MA (tendência de baixa confirmada).</li>
-          <li>RSI saindo da zona de sobrecompra (acima de 70).</li>
-          <li>MACD cruzando abaixo da linha de sinal ou histograma diminuindo.</li>
-          <li>Preferencialmente após um Death Cross (50 MA abaixo da 200 MA).</li>
+          <li>Preço abaixo da 200 MA <span class="signal-exit">(Sinal de Saída)</span></li>
+          <li>RSI saindo da zona de sobrecompra (acima de 70) <span class="signal-exit">(Sinal de Saída)</span></li>
+          <li>MACD cruzando abaixo da linha de sinal <span class="signal-exit">(Sinal de Saída)</span></li>
+          <li>Death Cross recente <span class="signal-exit">(Sinal de Saída)</span></li>
         </ul>
       </div>
 
