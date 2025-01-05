@@ -420,7 +420,7 @@
               },
               {
                 label: period === '1D' ? '20 MA' : '200 MA',
-                data: data.sma200.concat(Array(data.closePrices.length - data.sma200.length).fill(null)),
+                data: data.sma200,
                 borderColor: "orange",
                 borderWidth: 1,
                 fill: false,
@@ -430,7 +430,7 @@
               },
               {
                 label: period === '1D' ? '10 MA' : '50 MA',
-                data: data.sma50.concat(Array(data.closePrices.length - data.sma50.length).fill(null)),
+                data: data.sma50,
                 borderColor: "green",
                 borderWidth: 1,
                 fill: false,

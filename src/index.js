@@ -7,52 +7,77 @@ const app = express();
 
 app.use(express.static("public")); // Serve arquivos estáticos
 
-function getDateRange(period) {
+function getDateRange(period, includeExtraHistory = false) {
   const now = new Date();
+  let date;
+  
   switch (period) {
     case "1M":
-      const oneMonthAgo = new Date(now);
-      oneMonthAgo.setMonth(now.getMonth() - 1);
-      return { period1: oneMonthAgo };
+      date = new Date(now);
+      date.setMonth(now.getMonth() - 1);
+      break;
     case "3M":
-      const threeMonthsAgo = new Date(now);
-      threeMonthsAgo.setMonth(now.getMonth() - 3);
-      return { period1: threeMonthsAgo };
+      date = new Date(now);
+      date.setMonth(now.getMonth() - 3);
+      break;
     case "6M":
-      const sixMonthsAgo = new Date(now);
-      sixMonthsAgo.setMonth(now.getMonth() - 6);
-      return { period1: sixMonthsAgo };
+      date = new Date(now);
+      date.setMonth(now.getMonth() - 6);
+      break;
     case "1Y":
-      const oneYearAgo = new Date(now);
-      oneYearAgo.setFullYear(now.getFullYear() - 1);
-      return { period1: oneYearAgo };
+      date = new Date(now);
+      date.setFullYear(now.getFullYear() - 1);
+      break;
     case "5Y":
-      const fiveYearsAgo = new Date(now);
-      fiveYearsAgo.setFullYear(now.getFullYear() - 5);
-      return { period1: fiveYearsAgo };
+      date = new Date(now);
+      date.setFullYear(now.getFullYear() - 5);
+      break;
     case "ALL":
     default:
       return { period1: "2000-01-01" };
   }
+
+  // Se precisamos de dados extras para as médias móveis, adiciona 200 dias
+  if (includeExtraHistory) {
+    const back200Days = new Date(date.getTime() - 2 * 200 * 24 * 60 * 60 * 1000);
+    return { period1: back200Days };
+  }
+
+  return { period1: date };
 }
 
 async function fetchHistoricalData(ticker, period = "3M") {
-  const dateRange = getDateRange(period);
-  const historicalData = await yahooFinance.historical(ticker, {
-    ...dateRange,
+  console.log('\n\n--------\n\n');
+  // Primeiro, busca dados extras para calcular as médias móveis
+  const extraDateRange = getDateRange(period, true);
+  const historicalDataExtra = await yahooFinance.historical(ticker, {
+    ...extraDateRange,
     interval: "1d"
   });
 
-  if (!historicalData || historicalData.length === 0) {
+  if (!historicalDataExtra || historicalDataExtra.length === 0) {
     throw new Error("Ativo não encontrado ou sem dados.");
   }
+
+  // Agora busca apenas os dados do período solicitado
+  const dateRange = getDateRange(period, false);
+  const startDate = dateRange.period1;
+  
+  // Filtra os dados para o período solicitado
+  const historicalData = historicalDataExtra.filter(data => new Date(data.date) >= startDate);
+  console.log('historicalData', historicalData.length);
+  // Calcula as médias móveis com todos os dados disponíveis
+  const allClosePrices = historicalDataExtra.map((data) => data.close);
+  console.log('allClosePrices', allClosePrices, allClosePrices.length);
+  const sma50Values = SMA.calculate({ period: 50, values: allClosePrices.reverse() }).slice(0, historicalData.length).reverse();
+  const sma200Values = SMA.calculate({ period: 200, values: allClosePrices.reverse() }).slice(0, historicalData.length).reverse();
+  console.log('sma50Values', sma50Values, sma50Values.length);
+  console.log('sma200Values', sma200Values, sma200Values.length);
 
   const closePrices = historicalData.map((data) => data.close);
   const dates = historicalData.map((data) => data.date);
 
-  // Calcula indicadores
-  const sma50 = SMA.calculate({ period: 50, values: closePrices });
-  const sma200 = SMA.calculate({ period: 200, values: closePrices });
+  // Calcula os outros indicadores apenas para o período solicitado
   const rsi = RSI.calculate({ period: 14, values: closePrices });
   const macd = MACD.calculate({
     values: closePrices,
@@ -66,8 +91,8 @@ async function fetchHistoricalData(ticker, period = "3M") {
   return {
     dates,
     closePrices,
-    sma50,
-    sma200,
+    sma50: sma50Values,
+    sma200: sma200Values,
     rsi,
     macd,
   };
