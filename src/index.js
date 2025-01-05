@@ -295,6 +295,10 @@ app.get("/data/:ticker", async (req, res) => {
   }
 });
 
+app.get('/favorites.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/favorites.html'));
+});
+
 // Inicia o servidor
 app.listen(3000, () => {
   console.log("Servidor rodando em http://localhost:3000");
