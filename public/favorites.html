@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Meus Favoritos</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -301,6 +302,31 @@
         width: 100%;
       }
     }
+
+    /* Chart Section Styles */
+    .chart-section {
+      padding: 20px 0;
+      width: 100%;
+    }
+
+    .chart-container {
+      width: 100%;
+      height: 300px;
+      margin-top: 10px;
+    }
+
+    /* Adjust list view for chart section */
+    .favorites-list .chart-section {
+      margin: 10px 0;
+    }
+
+    .favorites-list .favorite-card {
+      flex-direction: column;
+    }
+
+    .favorites-list .favorite-card .chart-section {
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -446,13 +472,11 @@
           const previousPrice = data.closePrices[lastIndex - 1];
           const priceChange = ((currentPrice - previousPrice) / previousPrice) * 100;
 
-          const currentPrice7D = data.closePrices[lastIndex - 7];
-          const previousPrice7D = data.closePrices[lastIndex - 8];
-          const priceChange7D = ((currentPrice7D - previousPrice7D) / previousPrice7D) * 100;
+          const previousPrice7D = data.closePrices[lastIndex - 7];
+          const priceChange7D = ((currentPrice - previousPrice7D) / previousPrice7D) * 100;
 
-          const currentPrice1M = data.closePrices[lastIndex - 20];
-          const previousPrice1M = data.closePrices[lastIndex - 21];
-          const priceChange1M = ((currentPrice1M - previousPrice1M) / previousPrice1M) * 100;
+          const previousPrice1M = data.closePrices[lastIndex - 20];
+          const priceChange1M = ((currentPrice - previousPrice1M) / previousPrice1M) * 100;
           
           // Create card content
           const cardContent = `
@@ -496,6 +520,11 @@
                 <span class="info-value signal-${analysis.price.signal}">${analysis.price.message}</span>
               </div>
             </div>
+            <div class="chart-section">
+              <div class="chart-container">
+                <canvas id="canvas-${ticker}"></canvas>
+              </div>
+            </div>
             <a href="/${ticker}" class="chart-link">Ver Gráfico Detalhado →</a>
           `;
 
@@ -504,6 +533,134 @@
           const listCards = list.querySelectorAll('.favorite-card');
           gridCards[index].innerHTML = cardContent;
           listCards[index].innerHTML = cardContent;
+
+          // Store the data for later use when creating the chart
+          const chartData = {
+            prices: data.closePrices,
+            dates: data.dates.map(date => {
+              const d = new Date(date);
+              return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+            }),
+            rsi: data.analysis.map(a => a.rsi.value),
+            macd: data.analysis.map(a => a.macd.value),
+            signal: data.analysis.map(a => a.macd.signal)
+          };
+          
+          // Create charts immediately
+          const createChart = (card) => {
+            try {
+              const canvas = card.querySelector(`#canvas-${ticker}`);
+              if (!canvas) {
+                console.error('Canvas element not found');
+                return;
+              }
+
+              const ctx = canvas.getContext('2d');
+              if (!ctx) {
+                console.error('Could not get canvas context');
+                return;
+              }
+
+              new Chart(ctx, {
+                type: 'line',
+                data: {
+                  labels: chartData.dates,
+                  datasets: [
+                    {
+                      label: 'Preço',
+                      data: chartData.prices,
+                      borderColor: '#2980b9',
+                      backgroundColor: 'rgba(41, 128, 185, 0.1)',
+                      fill: true,
+                      yAxisID: 'y'
+                    },
+                    {
+                      label: 'RSI',
+                      data: chartData.rsi,
+                      borderColor: '#e67e22',
+                      borderWidth: 1,
+                      pointRadius: 0,
+                      yAxisID: 'y1'
+                    },
+                    {
+                      label: 'MACD',
+                      data: chartData.macd,
+                      borderColor: '#2ecc71',
+                      borderWidth: 1,
+                      pointRadius: 0,
+                      yAxisID: 'y2'
+                    },
+                    {
+                      label: 'Sinal',
+                      data: chartData.signal,
+                      borderColor: '#e74c3c',
+                      borderWidth: 1,
+                      pointRadius: 0,
+                      yAxisID: 'y2'
+                    }
+                  ]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  interaction: {
+                    mode: 'index',
+                    intersect: false,
+                  },
+                  plugins: {
+                    tooltip: {
+                      mode: 'index',
+                      intersect: false
+                    }
+                  },
+                  scales: {
+                    x: {
+                      grid: {
+                        display: false
+                      }
+                    },
+                    y: {
+                      type: 'linear',
+                      display: true,
+                      position: 'left',
+                      grid: {
+                        borderDash: [2, 4]
+                      }
+                    },
+                    y1: {
+                      type: 'linear',
+                      display: true,
+                      position: 'right',
+                      min: 0,
+                      max: 100,
+                      grid: {
+                        drawOnChartArea: false
+                      }
+                    },
+                    y2: {
+                      type: 'linear',
+                      display: true,
+                      position: 'right',
+                      grid: {
+                        drawOnChartArea: false
+                      }
+                    }
+                  }
+                }
+              });
+            } catch (error) {
+              console.error('Erro ao criar gráfico:', error);
+              console.error('Error details:', {
+                canvasExists: !!card.querySelector(`#canvas-${ticker}`),
+                chartData: chartData
+              });
+            }
+          };
+
+          // Create charts for both grid and list views
+          createChart(gridCards[index]);
+          createChart(listCards[index]);
+
         } catch (error) {
           console.error(`Erro ao carregar dados para ${ticker}:`, error);
         }
