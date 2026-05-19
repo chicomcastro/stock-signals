@@ -1,12 +1,74 @@
-const yahooFinance = require("yahoo-finance2").default;
+const yahooFinanceModule = require("yahoo-finance2");
+let yahooFinance = yahooFinanceModule.default || yahooFinanceModule;
+const path = require("path");
+const fs = require("fs");
 const { createCache, ttlForNow } = require("./cache");
 const { computeIndicators, findMaCrossPoints, findMacdSignalCrossPoints, analyzeIndicators } = require("./indicators");
 
-yahooFinance.suppressNotices?.(["yahooSurvey", "ripHistorical"]);
+if (typeof yahooFinance.suppressNotices === "function") {
+  yahooFinance.suppressNotices(["yahooSurvey", "ripHistorical"]);
+}
+
+function setYahooClient(client) {
+  yahooFinance = client;
+}
+
+function getYahooClient() {
+  return yahooFinance;
+}
 
 const historicalCache = createCache({ ttlMs: 5 * 60 * 1000 });
 const quoteCache = createCache({ ttlMs: 60 * 1000 });
 const searchCache = createCache({ ttlMs: 24 * 60 * 60 * 1000 });
+
+const USE_MOCK = process.env.MOCK_YAHOO === "1";
+let mockFixture = null;
+function loadMockFixture() {
+  if (mockFixture) return mockFixture;
+  const fixturePath = path.join(__dirname, "..", "test", "fixtures", "historical.json");
+  mockFixture = JSON.parse(fs.readFileSync(fixturePath, "utf8"));
+  return mockFixture;
+}
+
+function classifyError(err) {
+  const msg = String(err && err.message ? err.message : err);
+  if (/Too Many Requests|429|rate limit/i.test(msg)) {
+    const e = new Error("Limite de requisições do Yahoo Finance atingido. Tente novamente em 1-2 minutos.");
+    e.status = 429;
+    e.retryable = true;
+    return e;
+  }
+  if (/Not Found|404|No data|HTTP 404|symbol may be delisted/i.test(msg)) {
+    const e = new Error("Ativo não encontrado");
+    e.status = 404;
+    return e;
+  }
+  if (/Unexpected token|JSON/i.test(msg)) {
+    const e = new Error("Yahoo Finance retornou uma resposta inesperada. Tente novamente em alguns instantes.");
+    e.status = 502;
+    e.retryable = true;
+    return e;
+  }
+  return err;
+}
+
+async function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function retry(fn, { attempts = 2, baseMs = 400 } = {}) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = classifyError(err);
+      if (!lastErr.retryable || i === attempts - 1) throw lastErr;
+      await sleep(baseMs * Math.pow(2, i));
+    }
+  }
+  throw lastErr;
+}
 
 function getDateRange(period, includeExtraHistory = false) {
   const now = new Date();
@@ -46,24 +108,40 @@ function getDateRange(period, includeExtraHistory = false) {
   return { period1: date };
 }
 
+function buildMockHistorical() {
+  const fx = loadMockFixture();
+  return fx.historical.map((d) => ({
+    date: new Date(d.date),
+    close: d.close,
+    open: d.open ?? null,
+    high: d.high ?? null,
+    low: d.low ?? null,
+    volume: d.volume ?? null,
+  }));
+}
+
 async function fetchYahooHistorical(ticker, period) {
+  if (USE_MOCK) return buildMockHistorical();
+
   const { period1 } = getDateRange(period, true);
-  const chart = await yahooFinance.chart(ticker, {
-    period1,
-    interval: "1d",
-    includePrePost: false,
+  return retry(async () => {
+    const chart = await yahooFinance.chart(ticker, {
+      period1,
+      interval: "1d",
+      includePrePost: false,
+    });
+    const quotes = chart?.quotes || [];
+    return quotes
+      .filter((q) => q && q.date && q.close != null)
+      .map((q) => ({
+        date: q.date instanceof Date ? q.date : new Date(q.date),
+        close: q.close,
+        open: q.open ?? null,
+        high: q.high ?? null,
+        low: q.low ?? null,
+        volume: q.volume ?? null,
+      }));
   });
-  const quotes = chart?.quotes || [];
-  return quotes
-    .filter((q) => q && q.date && q.close != null)
-    .map((q) => ({
-      date: q.date instanceof Date ? q.date : new Date(q.date),
-      close: q.close,
-      open: q.open ?? null,
-      high: q.high ?? null,
-      low: q.low ?? null,
-      volume: q.volume ?? null,
-    }));
 }
 
 async function getHistoricalAnalysis(normalizedTicker, period) {
@@ -75,12 +153,7 @@ async function getHistoricalAnalysis(normalizedTicker, period) {
   try {
     raw = await fetchYahooHistorical(normalizedTicker, period);
   } catch (err) {
-    if (/Not Found|404|No data/i.test(err.message)) {
-      const error = new Error("Ativo não encontrado");
-      error.status = 404;
-      throw error;
-    }
-    throw err;
+    throw classifyError(err);
   }
 
   if (!raw || raw.length === 0) {
@@ -138,7 +211,19 @@ async function getQuote(normalizedTicker) {
   const cached = quoteCache.get(key);
   if (cached) return cached;
 
-  const quote = await yahooFinance.quote(normalizedTicker);
+  if (USE_MOCK) {
+    const fx = loadMockFixture();
+    const summary = { ...fx.quote, symbol: normalizedTicker };
+    quoteCache.set(key, summary);
+    return summary;
+  }
+
+  let quote;
+  try {
+    quote = await retry(() => yahooFinance.quote(normalizedTicker));
+  } catch (err) {
+    throw classifyError(err);
+  }
   const summary = {
     symbol: quote.symbol,
     shortName: quote.shortName ?? quote.longName ?? quote.symbol,
@@ -155,7 +240,18 @@ async function searchTickers(query) {
   const cached = searchCache.get(key);
   if (cached) return cached;
 
-  const result = await yahooFinance.search(query, { newsCount: 0, quotesCount: 8 });
+  if (USE_MOCK) {
+    const fx = loadMockFixture();
+    searchCache.set(key, fx.search);
+    return fx.search;
+  }
+
+  let result;
+  try {
+    result = await retry(() => yahooFinance.search(query, { newsCount: 0, quotesCount: 8 }));
+  } catch (err) {
+    throw classifyError(err);
+  }
   const quotes = (result.quotes || []).map((q) => ({
     symbol: q.symbol,
     shortname: q.shortname ?? q.longname ?? q.symbol,
@@ -171,6 +267,11 @@ module.exports = {
   getQuote,
   searchTickers,
   getDateRange,
+  classifyError,
+  retry,
+  setYahooClient,
+  getYahooClient,
   historicalCache,
   quoteCache,
+  searchCache,
 };

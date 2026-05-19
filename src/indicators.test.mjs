@@ -130,6 +130,41 @@ describe("analyzeCross", () => {
   });
 });
 
+describe("analyzeIndicators", () => {
+  it("returns full analysis for a given index", () => {
+    const data = {
+      dates: ["d1", "d2", "d3"],
+      closePrices: [100, 102, 101],
+      sma50: [null, 100, 101],
+      sma200: [null, 99, 100],
+      rsi: [null, 55, 60],
+      macdLine: [null, 0.5, 0.7],
+      macdSignal: [null, 0.4, 0.5],
+      macdHistogram: [null, 0.1, 0.2],
+    };
+    const r = indicators.analyzeIndicators(data, 2);
+    expect(r.date).toBe("d3");
+    expect(r.price.signal).toBe("entry");
+    expect(r.rsi.signal).toBe("neutral");
+    expect(r.macd.signal).toBe("entry");
+    expect(r.cross.signal).toBe("entry");
+  });
+});
+
+describe("analyzeCross null edge cases", () => {
+  it("returns neutral when smas are missing", () => {
+    expect(analyzeCross(null, 10, null, null).signal).toBe("neutral");
+    expect(analyzeCross(10, null, null, null).signal).toBe("neutral");
+  });
+
+  it("returns position-only when previous values are missing", () => {
+    const above = analyzeCross(12, 10, null, null);
+    expect(above.signal).toBe("entry");
+    const below = analyzeCross(10, 12, null, null);
+    expect(below.signal).toBe("exit");
+  });
+});
+
 describe("alignToDates", () => {
   it("pads with nulls so values align to end of series", () => {
     const aligned = alignToDates([5, 6, 7], 5, 3);

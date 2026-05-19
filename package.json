@@ -5,9 +5,17 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon src/index.js --watch src --watch public",
+    "dev": "node tools/sync-vendor.js && nodemon src/index.js --watch src --watch public",
+    "build": "node tools/sync-vendor.js",
+    "vercel-build": "node tools/sync-vendor.js",
+    "postinstall": "node tools/sync-vendor.js || true",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "node tools/sync-vendor.js && playwright test",
+    "test:e2e:install": "playwright install chromium --with-deps",
+    "test:all": "npm run test:coverage && npm run test:e2e",
+    "fixture:generate": "node tools/generate-fixture.js"
   },
   "engines": {
     "node": ">=18"
@@ -35,7 +43,10 @@
     "yahoo-finance2": "^2.13.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@vitest/coverage-v8": "^2.1.9",
     "nodemon": "^3.1.0",
+    "supertest": "^7.2.2",
     "vitest": "^2.1.8"
   }
 }

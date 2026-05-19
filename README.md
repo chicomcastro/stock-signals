@@ -38,12 +38,32 @@ Acesse [http://localhost:3000](http://localhost:3000).
 
 ## Scripts
 
-| Script           | Descrição                       |
-| ---------------- | ------------------------------- |
-| `npm start`      | Sobe o servidor de produção     |
-| `npm run dev`    | Servidor com auto-reload        |
-| `npm test`       | Executa testes unitários        |
-| `npm run test:watch` | Testes em modo watch        |
+| Script                    | Descrição                                            |
+| ------------------------- | ---------------------------------------------------- |
+| `npm start`               | Sobe o servidor de produção                          |
+| `npm run dev`             | Servidor com auto-reload                             |
+| `npm test`                | Executa testes unitários + integração (Vitest)       |
+| `npm run test:watch`      | Testes em modo watch                                 |
+| `npm run test:coverage`   | Cobertura via v8 (threshold ≥90%)                    |
+| `npm run test:e2e`        | E2E com Playwright (desktop + mobile) + screenshots  |
+| `npm run test:e2e:install`| Baixa o Chromium para Playwright                     |
+| `npm run test:all`        | Roda cobertura + e2e                                 |
+| `npm run fixture:generate`| Regenera a fixture sintética usada em testes         |
+
+### Estratégia de testes
+
+- **Unit** (`src/*.test.mjs`): funções puras — indicadores, ticker, cache, OG.
+- **Integração** (`test/integration/*.test.mjs`): server + dataProvider via Supertest. Cobre rotas, hardening, contratos JSON, modo `MOCK_YAHOO=1` (fixture).
+- **E2E** (`test/e2e/*.spec.js`): Playwright contra o servidor em `MOCK_YAHOO=1`. Smoke das jornadas principais + screenshots desktop e mobile.
+
+Para os testes E2E não dependerem de rede externa, o servidor pode ser executado com `MOCK_YAHOO=1`, que usa a fixture determinística em `test/fixtures/historical.json`.
+
+### CI
+
+O workflow `.github/workflows/ci.yml` roda em cada PR e push para `main`:
+
+1. **Job `unit`**: instala dependências, roda `vitest --coverage`, faz upload do `coverage/` como artifact e posta um comentário com a tabela de cobertura no PR.
+2. **Job `e2e`**: instala browsers do Playwright, roda os specs com `MOCK_YAHOO=1`, faz upload do `playwright-report/`, sobe screenshots para a branch `ci-previews/pr-<N>/<sha>/` e posta um comentário com as imagens inline.
 
 ## Variáveis de ambiente
 

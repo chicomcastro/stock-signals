@@ -6,3 +6,8 @@ TODO.md
 *.log
 .DS_Store
 coverage
+playwright-report
+test-results
+_comment_screenshots
+/pw-browsers
+public/chart.umd.js

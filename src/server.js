@@ -45,12 +45,18 @@ function createApp() {
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
 
+  const rateMax = process.env.RATE_LIMIT_MAX
+    ? Number(process.env.RATE_LIMIT_MAX)
+    : process.env.NODE_ENV === "test"
+    ? 10000
+    : 60;
   const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 60,
+    max: rateMax,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: "Muitas requisições. Tente novamente em 1 minuto." },
+    validate: { trustProxy: false },
   });
 
   const staticServer = express.static(PUBLIC_DIR, {
@@ -142,7 +148,8 @@ function createApp() {
       res.setHeader("Cache-Control", "public, max-age=3600");
       res.json(results);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      const status = err.status || 500;
+      res.status(status).json({ error: err.message });
     }
   });
 
@@ -156,7 +163,8 @@ function createApp() {
       res.setHeader("Cache-Control", "public, max-age=60");
       res.json(quote);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      const status = err.status || 500;
+      res.status(status).json({ error: err.message });
     }
   });
 
