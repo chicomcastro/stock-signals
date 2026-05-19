@@ -49,4 +49,29 @@ describe("MOCK_YAHOO mode (fixture-based)", () => {
     const body = Buffer.isBuffer(res.body) ? res.body.toString() : res.text || "";
     expect(body).toContain("PETR4");
   });
+
+  it("/api/backtest works with fixture", async () => {
+    const res = await request(app).get("/api/backtest/PETR4");
+    expect(res.status).toBe(200);
+    expect(res.body.ticker).toBe("PETR4.SA");
+    expect(res.body.golden).toBeDefined();
+  });
+
+  it("/api/signals works with fixture", async () => {
+    const res = await request(app).get("/api/signals?universe=PETR4&limit=1");
+    expect(res.status).toBe(200);
+    expect(res.body.buckets).toBeDefined();
+  });
+
+  it("/sinais renders with shell", async () => {
+    const res = await request(app).get("/sinais");
+    expect(res.status).toBe(200);
+    expect(res.text).toContain("Sinais do dia");
+  });
+
+  it("/alertas renders form", async () => {
+    const res = await request(app).get("/alertas");
+    expect(res.status).toBe(200);
+    expect(res.text).toContain("Alertas por e-mail");
+  });
 });

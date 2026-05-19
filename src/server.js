@@ -6,14 +6,28 @@ const rateLimit = require("express-rate-limit");
 const { normalizeTicker, displayTicker, isValidTickerInput } = require("./ticker");
 const { getHistoricalAnalysis, getQuote, searchTickers } = require("./dataProvider");
 const { tickerOgSvg, defaultOgSvg } = require("./og");
+const { backtestAllForTicker } = require("./backtest");
+const { extractDailySignals, aggregateSignals, DEFAULT_UNIVERSE } = require("./signals");
+const { createSubscriberStore, isValidEmail, sanitizeTickers } = require("./subscribers");
 
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
+const PARTIALS_DIR = path.join(PUBLIC_DIR, "partials");
 const STATIC_FILE_PATTERN = /\.(ico|png|jpg|jpeg|svg|webp|gif|js|mjs|css|map|txt|xml|json|webmanifest|woff|woff2|ttf)$/i;
 
 const FEATURED_TICKERS = [
   "PETR4", "VALE3", "ITUB4", "BBDC4", "BBAS3", "MGLU3", "TOTS3", "BOVA11",
   "IVVB11", "AAPL34", "AAPL", "MSFT", "GOOGL", "BTC-USD", "USDBRL=X",
 ];
+
+function loadPartial(name) {
+  try {
+    return fs.readFileSync(path.join(PARTIALS_DIR, `${name}.html`), "utf8");
+  } catch (_) {
+    return "";
+  }
+}
+
+const APP_SHELL_HTML = loadPartial("app-shell");
 
 function buildBaseUrl(req) {
   const envBase = process.env.PUBLIC_BASE_URL;
@@ -40,22 +54,35 @@ function htmlAttr(value) {
   })[c]);
 }
 
-function createApp() {
+function createApp({ subscriberStore } = {}) {
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
+  app.use(express.json({ limit: "20kb" }));
+
+  const store = subscriberStore || createSubscriberStore();
 
   const rateMax = process.env.RATE_LIMIT_MAX
     ? Number(process.env.RATE_LIMIT_MAX)
     : process.env.NODE_ENV === "test"
     ? 10000
     : 60;
+
   const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: rateMax,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: "Muitas requisições. Tente novamente em 1 minuto." },
+    validate: { trustProxy: false },
+  });
+
+  const writeLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: process.env.NODE_ENV === "test" ? 1000 : 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Muitas tentativas. Aguarde 1 minuto." },
     validate: { trustProxy: false },
   });
 
@@ -80,7 +107,7 @@ function createApp() {
 
   app.get("/sitemap.xml", (req, res) => {
     const base = buildBaseUrl(req);
-    const urls = ["/", "/favorites.html", ...FEATURED_TICKERS.map((t) => `/${t}`)];
+    const urls = ["/", "/sinais", "/alertas", "/favorites", ...FEATURED_TICKERS.map((t) => `/${t}`)];
     const body =
       `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
@@ -140,6 +167,62 @@ function createApp() {
     }
   });
 
+  app.get("/api/backtest/:ticker", apiLimiter, async (req, res) => {
+    try {
+      if (!isValidTickerInput(req.params.ticker)) {
+        return res.status(400).json({ error: "Ticker inválido" });
+      }
+      const normalized = normalizeTicker(req.params.ticker);
+      const data = await getHistoricalAnalysis(normalized, "5Y");
+      const result = backtestAllForTicker(data, [30, 60, 90]);
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.json({ ticker: normalized, ...result });
+    } catch (error) {
+      const status = error.status || 500;
+      res.status(status).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/signals", apiLimiter, async (req, res) => {
+    try {
+      const universe = (req.query.universe ? String(req.query.universe).split(",") : DEFAULT_UNIVERSE)
+        .map((t) => t.trim())
+        .filter(isValidTickerInput)
+        .slice(0, 60);
+
+      const limit = Math.min(Number(req.query.limit || universe.length), 60);
+      const period = "6M";
+      const tickers = universe.slice(0, limit);
+      const referenceDate = new Date();
+
+      const results = await Promise.allSettled(
+        tickers.map(async (t) => {
+          const normalized = normalizeTicker(t);
+          const data = await getHistoricalAnalysis(normalized, period);
+          const signals = extractDailySignals(data.analysis, data.dates, 5, referenceDate);
+          return { ticker: displayTicker(normalized), normalized, signals };
+        })
+      );
+
+      const ok = results
+        .filter((r) => r.status === "fulfilled")
+        .map((r) => r.value)
+        .filter((r) => r.signals.length > 0);
+
+      const buckets = aggregateSignals(ok);
+      res.setHeader("Cache-Control", "public, max-age=1800");
+      res.json({
+        date: referenceDate.toISOString().slice(0, 10),
+        universeSize: tickers.length,
+        withSignals: ok.length,
+        buckets,
+      });
+    } catch (error) {
+      const status = error.status || 500;
+      res.status(status).json({ error: error.message });
+    }
+  });
+
   app.get("/api/search", apiLimiter, async (req, res) => {
     try {
       const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
@@ -168,12 +251,69 @@ function createApp() {
     }
   });
 
-  app.get("/favorites.html", (req, res) => {
-    serveFavorites(req, res);
+  // Subscribers / alertas
+  app.post("/api/alerts/subscribe", writeLimiter, (req, res) => {
+    try {
+      const { email, tickers } = req.body || {};
+      if (!isValidEmail(email)) return res.status(400).json({ error: "E-mail inválido" });
+      const safe = sanitizeTickers(tickers);
+      if (safe.length === 0) return res.status(400).json({ error: "Selecione pelo menos um ativo" });
+      const sub = store.subscribe({ email, tickers: safe });
+      const base = buildBaseUrl(req);
+      res.json({
+        ok: true,
+        email: sub.email,
+        tickers: sub.tickers,
+        confirmUrl: `${base}/api/alerts/confirm/${sub.confirmToken}`,
+        unsubscribeUrl: `${base}/api/alerts/unsubscribe/${sub.unsubscribeToken}`,
+      });
+    } catch (err) {
+      const status = err.status || 500;
+      res.status(status).json({ error: err.message });
+    }
   });
 
-  app.get("/favorites", (req, res) => {
-    serveFavorites(req, res);
+  app.get("/api/alerts/confirm/:token", (req, res) => {
+    const sub = store.confirm(req.params.token);
+    if (!sub) return res.status(404).type("text/plain").send("Token inválido ou expirado.");
+    res.type("text/html").send(`<!doctype html><meta charset="utf-8"><title>Confirmado</title><body style="font-family:system-ui;padding:48px;text-align:center"><h1>✅ Inscrição confirmada</h1><p>Você vai receber sinais para <b>${sub.tickers.join(", ")}</b>.</p><p><a href="/">Voltar ao Stock Signals</a></p></body>`);
+  });
+
+  app.get("/api/alerts/unsubscribe/:token", (req, res) => {
+    const sub = store.unsubscribe(req.params.token);
+    if (!sub) return res.status(404).type("text/plain").send("Inscrição não encontrada.");
+    res.type("text/html").send(`<!doctype html><meta charset="utf-8"><title>Cancelado</title><body style="font-family:system-ui;padding:48px;text-align:center"><h1>👋 Inscrição cancelada</h1><p>Você não vai receber mais alertas em <b>${sub.email}</b>.</p><p><a href="/">Voltar ao Stock Signals</a></p></body>`);
+  });
+
+  // HTML routes
+  app.get("/favorites.html", (req, res) => serveStaticPage(req, res, "favorites.html", {
+    page_title: "Meus favoritos · Stock Signals",
+    page_description: "Sua watchlist de ativos com análise técnica resumida.",
+    canonical_path: "/favorites",
+    robots: "noindex",
+  }));
+  app.get("/favorites", (req, res) => serveStaticPage(req, res, "favorites.html", {
+    page_title: "Meus favoritos · Stock Signals",
+    page_description: "Sua watchlist de ativos com análise técnica resumida.",
+    canonical_path: "/favorites",
+    robots: "noindex",
+  }));
+
+  app.get("/sinais", (req, res) => serveStaticPage(req, res, "sinais.html", {
+    page_title: "Sinais do dia — Stock Signals",
+    page_description: "Ações da B3, ETFs e cripto com sinais técnicos hoje: Golden Cross, MACD, RSI e mais.",
+    canonical_path: "/sinais",
+  }));
+
+  app.get("/alertas", (req, res) => serveStaticPage(req, res, "alertas.html", {
+    page_title: "Alertas por email — Stock Signals",
+    page_description: "Receba um e-mail quando sinais técnicos forem detectados em seus ativos favoritos.",
+    canonical_path: "/alertas",
+  }));
+
+  app.get("/buscar", (req, res) => {
+    // Buscar simplesmente abre o modal de busca na home
+    res.redirect("/?search=1");
   });
 
   app.get("/:ticker", async (req, res) => {
@@ -219,41 +359,34 @@ function createApp() {
         page_description: htmlAttr(description),
         canonical_url: htmlAttr(`${baseUrl}/${display}`),
         og_image: htmlAttr(`${baseUrl}/og/${display}.svg`),
+        app_shell: APP_SHELL_HTML,
+        robots: "index, follow",
       });
       res.setHeader("Cache-Control", "public, max-age=60, s-maxage=300");
       res.send(html);
     });
   });
 
-  app.get("/", (req, res) => {
-    const templatePath = path.join(PUBLIC_DIR, "index.html");
+  app.get("/", (req, res) => serveStaticPage(req, res, "index.html", {
+    page_title: "Stock Signals — Sinais de compra e venda, sem jargão",
+    page_description: "Análise técnica simples e didática para ações da B3, BDRs, ETFs, cripto e câmbio. Veja os sinais do dia e configure alertas grátis.",
+    canonical_path: "/",
+  }));
+
+  function serveStaticPage(req, res, file, meta) {
+    const templatePath = path.join(PUBLIC_DIR, file);
     fs.readFile(templatePath, "utf8", (err, template) => {
       if (err) return res.status(500).send("Erro ao carregar o template");
       const baseUrl = buildBaseUrl(req);
       const html = injectTemplate(template, {
-        page_title: "Stock Signals — Análise técnica B3, ações, BDRs e mais",
-        page_description:
-          "Sinais técnicos automáticos (Golden Cross, MACD, RSI) para ações da B3, BDRs, ETFs, cripto e moedas. Gratuito e educacional.",
-        canonical_url: htmlAttr(`${baseUrl}/`),
+        page_title: htmlAttr(meta.page_title),
+        page_description: htmlAttr(meta.page_description),
+        canonical_url: htmlAttr(`${baseUrl}${meta.canonical_path}`),
         og_image: htmlAttr(`${baseUrl}/og/default.svg`),
+        app_shell: APP_SHELL_HTML,
+        robots: meta.robots || "index, follow",
       });
       res.setHeader("Cache-Control", "public, max-age=300, s-maxage=600");
-      res.send(html);
-    });
-  });
-
-  function serveFavorites(req, res) {
-    const templatePath = path.join(PUBLIC_DIR, "favorites.html");
-    fs.readFile(templatePath, "utf8", (err, template) => {
-      if (err) return res.status(500).send("Erro ao carregar o template");
-      const baseUrl = buildBaseUrl(req);
-      const html = injectTemplate(template, {
-        page_title: "Meus favoritos · Stock Signals",
-        page_description: "Sua watchlist de ativos com análise técnica resumida.",
-        canonical_url: htmlAttr(`${baseUrl}/favorites`),
-        og_image: htmlAttr(`${baseUrl}/og/default.svg`),
-      });
-      res.setHeader("Cache-Control", "private, no-cache");
       res.send(html);
     });
   }

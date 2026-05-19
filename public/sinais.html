@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>{{page_title}}</title>
+  <meta name="description" content="{{page_description}}">
+  <meta name="robots" content="{{robots}}">
+  <link rel="canonical" href="{{canonical_url}}">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{page_title}}">
+  <meta property="og:description" content="{{page_description}}">
+  <meta property="og:url" content="{{canonical_url}}">
+  <meta property="og:image" content="{{og_image}}">
+  <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <script src="/js/app-shell.js" defer></script>
+  <script defer data-domain="stock-signals.vercel.app" src="https://plausible.io/js/script.js"></script>
+</head>
+<body>
+  {{app_shell}}
+
+  <main class="container">
+    <header style="margin-bottom:20px" class="fade-up">
+      <h1>Sinais do dia</h1>
+      <p style="color:var(--muted);margin:4px 0 0">Ativos do nosso universo padrão com cruzamentos, momentum ou zonas de RSI nos últimos 5 pregões.</p>
+    </header>
+
+    <div id="loadingState" class="signals-empty fade-up" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      <p style="margin-top:12px">Calculando sinais — pode levar até 30 segundos…</p>
+    </div>
+
+    <div id="errorState" class="signals-empty" hidden role="alert">
+      <p>⚠️ Não foi possível carregar os sinais agora.</p>
+      <button class="btn btn--primary" onclick="loadSignals()">Tentar de novo</button>
+    </div>
+
+    <div id="resultsContainer" hidden>
+      <div id="signalsSummary" style="margin-bottom:16px;color:var(--muted);font-size:13px"></div>
+      <div id="signalsGrid" class="signals-day"></div>
+    </div>
+
+    <section style="margin-top:32px" class="card card--quiet">
+      <h2 style="margin-top:0">O que esses sinais querem dizer?</h2>
+      <ul style="padding-left:20px;margin:0;color:var(--text-2);font-size:14px">
+        <li><b>Cruzamento de alta (Golden Cross)</b>: a média de 50 dias passou para cima da de 200 dias. Sinal clássico de tendência de alta começando.</li>
+        <li><b>Cruzamento de baixa (Death Cross)</b>: o oposto — tendência de baixa começando.</li>
+        <li><b>Momentum de alta (MACD)</b>: a linha do MACD cruzou a linha de sinal para cima. O preço está acelerando para cima.</li>
+        <li><b>Momentum de baixa (MACD)</b>: o oposto — preço perdendo força.</li>
+        <li><b>Sobrevenda (RSI &lt; 30)</b>: o ativo caiu muito e pode reagir.</li>
+        <li><b>Sobrecompra (RSI &gt; 70)</b>: subiu muito e pode pausar ou corrigir.</li>
+      </ul>
+      <p style="margin:12px 0 0;color:var(--muted);font-size:12px">Não é recomendação de investimento. Use junto da sua análise fundamentalista.</p>
+    </section>
+  </main>
+
+  <script>
+    const SIGNAL_META = {
+      golden:        { title: 'Cruzamento de alta',   sub: 'Média 50 cruzou acima da 200', tag: '🟢', cls: 'sig-chip--up' },
+      death:         { title: 'Cruzamento de baixa',  sub: 'Média 50 cruzou abaixo da 200', tag: '🔴', cls: 'sig-chip--down' },
+      bullish_cross: { title: 'Momentum de alta',     sub: 'MACD cruzou acima da linha de sinal', tag: '🔺', cls: 'sig-chip--up' },
+      bearish_cross: { title: 'Momentum de baixa',    sub: 'MACD cruzou abaixo da linha de sinal', tag: '🔻', cls: 'sig-chip--down' },
+      rsi_oversold:  { title: 'Sobrevenda',           sub: 'RSI abaixo de 30', tag: '🟦', cls: 'sig-chip--neutral' },
+      rsi_overbought:{ title: 'Sobrecompra',          sub: 'RSI acima de 70', tag: '🟧', cls: 'sig-chip--warn' },
+    };
+
+    function formatDate(iso) {
+      try { return new Date(iso).toLocaleDateString('pt-BR'); } catch (_) { return ''; }
+    }
+
+    async function loadSignals() {
+      const loading = document.getElementById('loadingState');
+      const error = document.getElementById('errorState');
+      const results = document.getElementById('resultsContainer');
+      loading.hidden = false;
+      error.hidden = true;
+      results.hidden = true;
+
+      try {
+        const res = await fetch('/api/signals');
+        if (!res.ok) throw new Error('http ' + res.status);
+        const data = await res.json();
+        render(data);
+        loading.hidden = true;
+        results.hidden = false;
+      } catch (err) {
+        loading.hidden = true;
+        error.hidden = false;
+      }
+    }
+
+    function render(data) {
+      const summary = document.getElementById('signalsSummary');
+      summary.textContent = `${data.withSignals} de ${data.universeSize} ativos com sinais — referência ${formatDate(data.date)}.`;
+
+      const grid = document.getElementById('signalsGrid');
+      grid.innerHTML = '';
+
+      let any = false;
+      for (const [key, items] of Object.entries(data.buckets || {})) {
+        if (!items || items.length === 0) continue;
+        any = true;
+        const meta = SIGNAL_META[key] || { title: key, sub: '', tag: '•', cls: 'sig-chip--neutral' };
+        const card = document.createElement('div');
+        card.className = 'signal-card fade-up';
+        card.innerHTML = `
+          <div class="signal-card__header">
+            <span class="sig-chip ${meta.cls}">${meta.tag} ${meta.title}</span>
+          </div>
+          <p class="signal-card__sub">${meta.sub} · ${items.length} ${items.length === 1 ? 'ativo' : 'ativos'}</p>
+          <div class="signal-card__list">
+            ${items.slice(0, 10).map(item => `
+              <a class="signal-card__item" href="/${encodeURIComponent(item.ticker)}">
+                <span class="signal-card__item-symbol">${item.ticker}</span>
+                <span class="signal-card__item-meta">${formatDate(item.date)}</span>
+              </a>
+            `).join('')}
+            ${items.length > 10 ? `<small style="text-align:center;display:block;color:var(--muted);margin-top:4px">+${items.length - 10} ativos</small>` : ''}
+          </div>
+        `;
+        grid.appendChild(card);
+      }
+
+      if (!any) {
+        grid.innerHTML = '<div class="signals-empty card">📭 Nenhum sinal novo no último pregão. Volte amanhã ou <a href="/alertas">configure alertas</a> por e-mail.</div>';
+      }
+    }
+
+    loadSignals();
+  </script>
+</body>
+</html>

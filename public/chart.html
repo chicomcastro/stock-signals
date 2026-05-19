@@ -2,9 +2,10 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>{{page_title}}</title>
   <meta name="description" content="{{page_description}}">
+  <meta name="robots" content="{{robots}}">
   <link rel="canonical" href="{{canonical_url}}">
   <meta property="og:type" content="article">
   <meta property="og:title" content="{{page_title}}">
@@ -20,522 +21,475 @@
   <meta name="twitter:title" content="{{page_title}}">
   <meta name="twitter:description" content="{{page_description}}">
   <meta name="twitter:image" content="{{og_image}}">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="apple-touch-icon" href="/favicon.svg">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
   <script src="/chart.umd.js"></script>
-  <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "Stock Signals", "item": "/" },
-        { "@type": "ListItem", "position": 2, "name": "{{ticker}}", "item": "{{canonical_url}}" }
-      ]
-    }
-  </script>
+  <script src="/js/app-shell.js" defer></script>
   <script defer data-domain="stock-signals.vercel.app" src="https://plausible.io/js/script.js"></script>
-  <style>
-    body { max-width: 1600px; }
-
-    .main-container {
-      display: grid;
-      gap: 20px;
-      margin-top: 16px;
-    }
-
-    @media (min-width: 1200px) {
-      .main-container {
-        grid-template-columns: 1fr 420px;
-        align-items: start;
-      }
-      .framework {
-        position: sticky;
-        top: 16px;
-        max-height: calc(100vh - 32px);
-        overflow-y: auto;
-      }
-    }
-
-    .chart-section {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .chart-container, .legend-info, .framework, .analysis-box {
-      background: white;
-      padding: 20px;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-    }
-
-    .legend-item { margin-bottom: 14px; }
-    .legend-item:last-child { margin-bottom: 0; }
-    .legend-item h3 { margin: 0 0 4px; font-size: 15px; }
-    .legend-item p { margin: 0; color: var(--muted); font-size: 13px; }
-
-    .back-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 16px;
-      color: var(--brand);
-      text-decoration: none;
-      font-size: 14px;
-    }
-    .back-link:hover { text-decoration: underline; }
-
-    .tradingview-link {
-      display: inline-flex;
-      align-items: center;
-      padding: 8px 14px;
-      background-color: #2962FF;
-      color: white;
-      text-decoration: none;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 500;
-      transition: background-color 0.15s;
-    }
-    .tradingview-link:hover { background-color: #1E4BD8; }
-
-    .title-container {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-
-    .title-container h1 {
-      margin: 0;
-      font-size: clamp(20px, 4vw, 28px);
-      font-weight: 700;
-    }
-
-    .asset-name {
-      color: var(--muted);
-      font-weight: 400;
-      font-size: 0.7em;
-      margin-left: 8px;
-    }
-
-    .controls {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .period-button, .toggle-button {
-      padding: 6px 12px;
-      border: 1px solid var(--border);
-      background: white;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      transition: all 0.15s;
-      color: var(--text);
-    }
-
-    .period-button:hover, .toggle-button:hover { background: var(--surface); }
-    .period-button.active, .toggle-button.active {
-      background: var(--brand);
-      color: white;
-      border-color: var(--brand);
-    }
-
-    .error-message {
-      color: var(--accent-down);
-      padding: 12px 16px;
-      border-radius: 8px;
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      margin: 8px 0;
-      display: none;
-    }
-
-    .loading-overlay {
-      position: relative;
-      min-height: 200px;
-    }
-
-    .loading-overlay::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: rgba(255,255,255,0.6);
-      display: none;
-    }
-
-    .loading-overlay.is-loading::after { display: block; }
-
-    .analysis-box h3 {
-      margin: 0 0 12px;
-      color: var(--text);
-      font-size: 16px;
-    }
-
-    .indicator-status {
-      display: grid;
-      grid-template-columns: 1fr auto auto;
-      gap: 12px;
-      align-items: center;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .indicator-status:last-child { border-bottom: none; }
-
-    .indicator-name { font-weight: 600; color: var(--text); font-size: 14px; }
-    .indicator-value { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
-
-    .favorite-btn {
-      background: none;
-      border: 1px solid var(--border);
-      cursor: pointer;
-      font-size: 1.1em;
-      padding: 4px 10px;
-      border-radius: 6px;
-      transition: all 0.15s;
-      color: var(--muted);
-    }
-    .favorite-btn:hover { background: var(--surface); }
-    .favorite-btn.active { color: #f1c40f; border-color: #fde68a; background: #fffbeb; }
-
-    .share-btn {
-      padding: 8px 14px;
-      border: 1px solid var(--border);
-      background: white;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      color: var(--text);
-    }
-
-    .framework h2 {
-      color: var(--text);
-      margin: 0 0 16px;
-      text-align: center;
-      font-size: 1.25em;
-    }
-    .framework h3 { color: var(--brand); margin: 20px 0 10px; font-size: 1.05em; }
-    .framework ul { margin: 8px 0; padding-left: 20px; }
-    .framework li { margin: 6px 0; font-size: 13px; }
-    .framework p { font-size: 13px; margin: 8px 0; }
-    .framework-section { margin-bottom: 20px; }
-    .example-box {
-      background-color: #e0f2fe;
-      padding: 14px;
-      border-radius: 8px;
-      margin: 12px 0;
-    }
-    .example-box h4 { color: var(--brand); margin: 0 0 6px; font-size: 14px; }
-
-    .framework::-webkit-scrollbar { width: 8px; }
-    .framework::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%) translateY(60px);
-      background: #0f172a;
-      color: white;
-      padding: 10px 18px;
-      border-radius: 8px;
-      font-size: 14px;
-      opacity: 0;
-      transition: all 0.2s;
-      z-index: 100;
-    }
-    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-  </style>
 </head>
 <body>
-  <a href="/" class="back-link">← Voltar para a lista</a>
-  <div class="title-container">
-    <h1>{{ticker}}<span class="asset-name" id="asset-name">{{asset_name}}</span></h1>
-    <button id="favoriteBtn" class="favorite-btn" aria-label="Favoritar">☆ Favoritar</button>
-    <button id="shareBtn" class="share-btn" aria-label="Copiar link">🔗 Copiar link</button>
-    <a href="https://br.tradingview.com/symbols/{{ticker}}/" target="_blank" rel="noopener" class="tradingview-link">
-      Ver no TradingView ↗
-    </a>
-  </div>
+  {{app_shell}}
 
-  <div class="main-container">
-    <div class="chart-section">
-      <div class="controls">
-        <button class="period-button" data-period="1M">1M</button>
-        <button class="period-button active" data-period="3M">3M</button>
-        <button class="period-button" data-period="6M">6M</button>
-        <button class="period-button" data-period="1Y">1Y</button>
-        <button class="period-button" data-period="5Y">5Y</button>
-        <button class="period-button" data-period="ALL">Tudo</button>
-        <span style="flex:1"></span>
-        <button id="toggleMacd" class="toggle-button">Mostrar MACD</button>
+  <main class="container">
+    <section class="ticker-hero fade-up" aria-labelledby="ticker-title">
+      <div class="ticker-hero__top">
+        <h1 id="ticker-title" class="ticker-hero__title">{{ticker}}</h1>
+        <span class="ticker-hero__name" id="assetName">{{asset_name}}</span>
+        <div class="ticker-hero__price" id="livePrice" hidden>
+          <span class="ticker-hero__price-value" id="livePriceValue">—</span>
+          <span class="ticker-hero__price-change" id="livePriceChange">—</span>
+        </div>
       </div>
 
-      <div class="error-message" id="errorMessage"></div>
+      <div class="ticker-hero__actions">
+        <button id="favoriteBtn" class="btn btn--sm" type="button" aria-pressed="false" aria-label="Favoritar">
+          <span aria-hidden="true">☆</span> <span class="btn-label">Favoritar</span>
+        </button>
+        <button id="shareBtn" class="btn btn--sm" type="button" aria-label="Copiar link">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+          Compartilhar
+        </button>
+        <button id="frameworkBtn" class="btn btn--sm" type="button" aria-label="Abrir guia rápido">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+          Como ler
+        </button>
+        <a href="https://br.tradingview.com/symbols/{{ticker}}/" target="_blank" rel="noopener" class="btn btn--sm" style="background:#2962FF;color:#fff;border-color:#2962FF">
+          TradingView ↗
+        </a>
+      </div>
+    </section>
 
-      <div class="analysis-box">
-        <h3>Análise do pregão <span id="analysis-date" style="color:var(--muted); font-weight:400;"></span></h3>
-        <div id="current-analysis">
-          <div class="skeleton" style="height: 32px; margin-bottom: 8px;"></div>
-          <div class="skeleton" style="height: 32px; margin-bottom: 8px;"></div>
-          <div class="skeleton" style="height: 32px;"></div>
+    <div id="errorBanner" hidden role="alert" style="background:var(--accent-down-soft);color:var(--accent-down);padding:12px 16px;border-radius:var(--radius);margin-bottom:12px;font-size:14px"></div>
+
+    <section class="card fade-up" style="margin-bottom:16px" aria-labelledby="verdict-title">
+      <h2 id="verdict-title" class="sr-only">Veredicto do dia</h2>
+      <div id="verdict" class="verdict">
+        <div class="verdict__icon" aria-hidden="true">⏳</div>
+        <div>
+          <p class="verdict__title">Calculando análise…</p>
+          <p class="verdict__sub" id="verdictDate">aguarde alguns segundos</p>
         </div>
-        <p style="font-size:12px; color:var(--muted); margin: 12px 0 0;">Clique em qualquer ponto do gráfico para ver a análise daquele dia.</p>
+      </div>
+    </section>
+
+    <section class="card fade-up" style="margin-bottom:16px" aria-labelledby="indicators-title">
+      <div class="card-header">
+        <h2 id="indicators-title">Indicadores <small id="analysisDate" style="font-weight:400;color:var(--muted)"></small></h2>
+        <span style="font-size:11px;color:var(--muted)">Clique no gráfico para ver outro dia</span>
+      </div>
+      <div id="indicatorList" class="indicator-list">
+        <div class="skeleton" style="height:48px;margin-bottom:8px"></div>
+        <div class="skeleton" style="height:48px;margin-bottom:8px"></div>
+        <div class="skeleton" style="height:48px;margin-bottom:8px"></div>
+        <div class="skeleton" style="height:48px"></div>
+      </div>
+    </section>
+
+    <section class="chart-panel fade-up" aria-labelledby="chart-title">
+      <div class="chart-panel__title">
+        <h2 id="chart-title">Preço, médias e cruzamentos</h2>
+        <div class="chip-group" role="tablist" aria-label="Período">
+          <button class="chip" data-period="1M">1M</button>
+          <button class="chip is-active" data-period="3M">3M</button>
+          <button class="chip" data-period="6M">6M</button>
+          <button class="chip" data-period="1Y">1A</button>
+          <button class="chip" data-period="5Y">5A</button>
+          <button class="chip" data-period="ALL">Tudo</button>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap"><canvas id="chart" aria-label="Gráfico de preço e médias móveis"></canvas></div>
+    </section>
+
+    <section class="chart-panel fade-up" id="macdPanel" hidden aria-labelledby="macd-title">
+      <div class="chart-panel__title">
+        <h2 id="macd-title">Momentum (MACD)</h2>
+        <button class="btn btn--sm btn--ghost" id="toggleMacdOff">Ocultar</button>
+      </div>
+      <div class="chart-canvas-wrap chart-canvas-wrap--macd"><canvas id="macdChart" aria-label="Gráfico do MACD"></canvas></div>
+    </section>
+
+    <section style="margin-bottom:16px" class="fade-up">
+      <button class="btn" id="toggleMacd" style="width:100%">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h6l3-9 3 18 3-9h3"/></svg>
+        <span id="toggleMacdLabel">Ver MACD em detalhes</span>
+      </button>
+    </section>
+
+    <section class="card fade-up" style="margin-bottom:16px" aria-labelledby="backtest-title">
+      <div class="card-header">
+        <h2 id="backtest-title">Performance histórica dos sinais
+          <span class="info-pill" data-tooltip="Pegamos toda vez que cada sinal apareceu nos últimos 5 anos e medimos o retorno médio do ativo nos 30/60/90 pregões seguintes. Não garante o futuro.">?</span>
+        </h2>
+      </div>
+      <div id="backtestContent">
+        <div class="skeleton" style="height:80px"></div>
+      </div>
+    </section>
+
+    <footer class="app-footer">
+      Análises automáticas a partir de dados públicos. Não é recomendação de investimento.
+    </footer>
+  </main>
+
+  <!-- Framework drawer -->
+  <div id="frameworkDrawer" class="framework-drawer" aria-hidden="true">
+    <div class="framework-drawer__backdrop" data-close-drawer></div>
+    <div class="framework-drawer__panel" role="dialog" aria-modal="true" aria-label="Como ler os sinais">
+      <button class="framework-drawer__close" data-close-drawer aria-label="Fechar">×</button>
+      <h2 style="margin-top:0">Como ler os sinais</h2>
+
+      <div style="margin-bottom:16px">
+        <h3>🔹 Preço × Média de 200 dias</h3>
+        <p>É o termômetro de longo prazo. Preço acima dela = mercado favorece a alta. Preço abaixo = mercado favorece a baixa.</p>
+      </div>
+      <div style="margin-bottom:16px">
+        <h3>🔹 Cruzamento das médias (50 × 200)</h3>
+        <p><b>Golden Cross</b>: média curta cruza acima da longa — clássico início de tendência de alta. <b>Death Cross</b>: o oposto.</p>
+      </div>
+      <div style="margin-bottom:16px">
+        <h3>🔹 RSI — Força do movimento</h3>
+        <p>Acima de 70 = subiu demais (pode pausar). Abaixo de 30 = caiu demais (pode reagir).</p>
+      </div>
+      <div style="margin-bottom:16px">
+        <h3>🔹 MACD — Momentum</h3>
+        <p>Quando a linha do MACD cruza <b>acima</b> da linha de sinal → momentum virando para alta. Quando cruza <b>abaixo</b> → para baixa.</p>
       </div>
 
-      <div class="chart-container">
-        <canvas id="chart" width="800" height="400" aria-label="Gráfico de preço e indicadores"></canvas>
-      </div>
-
-      <div class="chart-container" id="macd-container" style="display:none;">
-        <canvas id="macd-chart" height="180" aria-label="Gráfico do MACD"></canvas>
-      </div>
-
-      <div class="legend-info">
-        <div class="legend-item">
-          <h3>📈 Preço de fechamento</h3>
-          <p>Preço final da ação ao término de cada pregão.</p>
-        </div>
-        <div class="legend-item">
-          <h3>📊 MA50 / MA200</h3>
-          <p>Médias móveis de 50 e 200 dias. Cruzamentos indicam mudanças de tendência (Golden Cross / Death Cross).</p>
-        </div>
-        <div class="legend-item">
-          <h3>🔄 RSI (Índice de Força Relativa)</h3>
-          <p>Mede a velocidade das mudanças de preço. Acima de 70 = sobrecompra; abaixo de 30 = sobrevenda.</p>
-        </div>
-        <div class="legend-item">
-          <h3>📉 MACD (linha + sinal + histograma)</h3>
-          <p>Quando a linha do MACD cruza acima da linha de sinal, é gatilho de alta. Quando cruza abaixo, gatilho de baixa. O histograma mostra a distância entre as duas e antecede o cruzamento.</p>
-        </div>
+      <div class="card card--quiet" style="margin-top:20px">
+        <h3 style="margin-top:0">Combinar dá mais confiança</h3>
+        <p style="margin:0;font-size:13px">Um sinal sozinho pode dar falso positivo. Quando dois ou três aparecem juntos — por exemplo, Golden Cross + RSI saindo da sobrevenda + MACD cruzando para cima — a probabilidade da tendência se confirmar aumenta.</p>
       </div>
     </div>
-
-    <aside class="framework">
-      <h2>Framework: entrada e saída</h2>
-
-      <div class="framework-section">
-        <h3>1. Tendência (MA50 e MA200)</h3>
-        <ul>
-          <li>Preço acima da MA200 → tendência de alta <span class="signal-entry">(entrada)</span></li>
-          <li>Preço abaixo da MA200 → tendência de baixa <span class="signal-exit">(saída)</span></li>
-          <li>Golden Cross (MA50 cruza acima da MA200) <span class="signal-entry">(entrada)</span></li>
-          <li>Death Cross (MA50 cruza abaixo da MA200) <span class="signal-exit">(saída)</span></li>
-        </ul>
-      </div>
-
-      <div class="framework-section">
-        <h3>2. Força relativa (RSI)</h3>
-        <ul>
-          <li>RSI &lt; 30 começando a subir <span class="signal-entry">(entrada)</span></li>
-          <li>RSI &gt; 70 começando a cair <span class="signal-exit">(saída)</span></li>
-          <li>Divergência preço × RSI: atenção a reversões.</li>
-        </ul>
-      </div>
-
-      <div class="framework-section">
-        <h3>3. Momentum (MACD)</h3>
-        <ul>
-          <li>Linha MACD cruza <strong>acima</strong> da linha de sinal <span class="signal-entry">(entrada)</span></li>
-          <li>Linha MACD cruza <strong>abaixo</strong> da linha de sinal <span class="signal-exit">(saída)</span></li>
-          <li>Histograma crescente = força na tendência atual.</li>
-        </ul>
-      </div>
-
-      <div class="framework-section">
-        <h3>4. Combinação ideal</h3>
-        <p><strong>Compra:</strong> preço &gt; MA200 + RSI saindo da sobrevenda + MACD cruzando acima da linha de sinal + Golden Cross recente.</p>
-        <p><strong>Venda:</strong> preço &lt; MA200 + RSI saindo da sobrecompra + MACD cruzando abaixo da linha de sinal + Death Cross recente.</p>
-      </div>
-
-      <div class="framework-section">
-        <h3>Regras</h3>
-        <ul>
-          <li>Em mercado lateral, espere pelo menos dois indicadores alinhados.</li>
-          <li>Defina stop-loss e take-profit antes da operação.</li>
-          <li>Confirme com análise fundamentalista.</li>
-        </ul>
-      </div>
-    </aside>
   </div>
 
-  <div id="toast" class="toast"></div>
-
   <script>
+    const tickerDisplay = '{{ticker}}';
+    const params = new URLSearchParams(window.location.search);
+    const initialPeriod = ['1M','3M','6M','1Y','5Y','ALL'].includes(params.get('period')) ? params.get('period') : '3M';
+    const highlightDate = params.get('date');
+    const highlightSignal = params.get('highlight');
+
     let priceChart = null;
     let macdChart = null;
     let showMacd = false;
     let currentData = null;
-    const tickerDisplay = '{{ticker}}';
-
-    function showToast(text) {
-      const t = document.getElementById('toast');
-      t.textContent = text;
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 1800);
-    }
+    let currentPeriod = initialPeriod;
 
     function plausible(event, props) {
       try { if (window.plausible) window.plausible(event, { props }); } catch (_) {}
     }
 
+    function fmt(n, decimals) {
+      if (n == null || Number.isNaN(n)) return '—';
+      return Number(n).toLocaleString('pt-BR', {
+        minimumFractionDigits: decimals == null ? 2 : decimals,
+        maximumFractionDigits: decimals == null ? 2 : decimals,
+      });
+    }
+    function fmtPct(r) {
+      if (r == null) return '—';
+      const v = r * 100;
+      return (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+    }
+
+    // ===== Favorites =====
     function loadFavoriteState() {
-      const favorites = JSON.parse(localStorage.getItem('stockFavorites')) || {};
+      const favs = JSON.parse(localStorage.getItem('stockFavorites') || '{}');
       const btn = document.getElementById('favoriteBtn');
-      if (favorites[tickerDisplay]) {
-        btn.textContent = '★ Favoritado';
-        btn.classList.add('active');
+      const label = btn.querySelector('.btn-label');
+      if (favs[tickerDisplay]) {
+        btn.classList.add('is-active');
+        btn.setAttribute('aria-pressed', 'true');
+        btn.firstElementChild.textContent = '★';
+        if (label) label.textContent = 'Favoritado';
       } else {
-        btn.textContent = '☆ Favoritar';
-        btn.classList.remove('active');
+        btn.classList.remove('is-active');
+        btn.setAttribute('aria-pressed', 'false');
+        btn.firstElementChild.textContent = '☆';
+        if (label) label.textContent = 'Favoritar';
       }
     }
-
-    function toggleFavorite() {
-      const favorites = JSON.parse(localStorage.getItem('stockFavorites')) || {};
-      const assetName = document.getElementById('asset-name').textContent.replace(/^\s*[—-]\s*/, '').trim() || tickerDisplay;
-      if (favorites[tickerDisplay]) {
-        delete favorites[tickerDisplay];
-        plausible('favorite_remove', { ticker: tickerDisplay });
-      } else {
-        favorites[tickerDisplay] = assetName;
-        plausible('favorite_add', { ticker: tickerDisplay });
-      }
-      localStorage.setItem('stockFavorites', JSON.stringify(favorites));
+    document.getElementById('favoriteBtn').addEventListener('click', () => {
+      const favs = JSON.parse(localStorage.getItem('stockFavorites') || '{}');
+      const name = (document.getElementById('assetName').textContent || '').replace(/^\s*[—-]\s*/, '').trim() || tickerDisplay;
+      if (favs[tickerDisplay]) { delete favs[tickerDisplay]; plausible('favorite_remove', { ticker: tickerDisplay }); }
+      else { favs[tickerDisplay] = name; plausible('favorite_add', { ticker: tickerDisplay }); }
+      localStorage.setItem('stockFavorites', JSON.stringify(favs));
       loadFavoriteState();
-    }
-
-    async function copyShareLink() {
-      try {
-        await navigator.clipboard.writeText(window.location.href);
-        showToast('Link copiado!');
-        plausible('share_copy', { ticker: tickerDisplay });
-      } catch (_) {
-        showToast('Não foi possível copiar');
-      }
-    }
-
-    document.getElementById('favoriteBtn').addEventListener('click', toggleFavorite);
-    document.getElementById('shareBtn').addEventListener('click', copyShareLink);
-    document.addEventListener('DOMContentLoaded', loadFavoriteState);
-
-    document.getElementById('toggleMacd').addEventListener('click', function () {
-      this.classList.toggle('active');
-      showMacd = !showMacd;
-      this.textContent = showMacd ? 'Ocultar MACD' : 'Mostrar MACD';
-      document.getElementById('macd-container').style.display = showMacd ? 'block' : 'none';
-      plausible('toggle_macd', { state: showMacd ? 'on' : 'off' });
-      if (currentData) renderMacdChart(currentData);
+      window.toast && window.toast(favs[tickerDisplay] ? 'Adicionado aos favoritos' : 'Removido dos favoritos');
     });
 
-    async function fetchAndPlot(period) {
-      const ticker = tickerDisplay;
-      const errorMessage = document.getElementById('errorMessage');
-      errorMessage.style.display = 'none';
-
+    // ===== Share =====
+    document.getElementById('shareBtn').addEventListener('click', async () => {
+      const url = window.location.href;
       try {
-        const response = await fetch(`/data/${encodeURIComponent(ticker)}?period=${encodeURIComponent(period)}`);
-        if (!response.ok) {
-          const errBody = await response.json().catch(() => ({}));
-          throw new Error(errBody.error || `Erro ${response.status}`);
+        if (navigator.share) {
+          await navigator.share({ title: tickerDisplay + ' · Stock Signals', url });
+        } else {
+          await navigator.clipboard.writeText(url);
+          window.toast && window.toast('Link copiado!');
         }
-        const data = await response.json();
+        plausible('share', { ticker: tickerDisplay });
+      } catch (_) {}
+    });
+
+    // ===== Framework drawer =====
+    function openDrawer() {
+      const d = document.getElementById('frameworkDrawer');
+      d.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeDrawer() {
+      const d = document.getElementById('frameworkDrawer');
+      d.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+    document.getElementById('frameworkBtn').addEventListener('click', openDrawer);
+    document.querySelectorAll('[data-close-drawer]').forEach(el => el.addEventListener('click', closeDrawer));
+
+    // ===== MACD toggle =====
+    function setMacd(on) {
+      showMacd = on;
+      document.getElementById('macdPanel').hidden = !on;
+      document.getElementById('toggleMacd').classList.toggle('is-active', on);
+      document.getElementById('toggleMacdLabel').textContent = on ? 'Ocultar MACD' : 'Ver MACD em detalhes';
+      if (on && currentData) renderMacdChart(currentData);
+    }
+    document.getElementById('toggleMacd').addEventListener('click', () => { setMacd(!showMacd); plausible('toggle_macd', { state: showMacd ? 'on' : 'off' }); });
+    document.getElementById('toggleMacdOff').addEventListener('click', () => setMacd(false));
+
+    // ===== Period chips =====
+    document.querySelectorAll('.chip[data-period]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.chip[data-period]').forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        currentPeriod = btn.dataset.period;
+        const u = new URL(window.location.href);
+        u.searchParams.set('period', currentPeriod);
+        window.history.replaceState({}, '', u.toString());
+        fetchAndPlot(currentPeriod);
+      });
+    });
+
+    // Set initial active chip
+    document.querySelectorAll('.chip[data-period]').forEach(b => b.classList.toggle('is-active', b.dataset.period === initialPeriod));
+
+    // ===== Live quote =====
+    async function loadQuote() {
+      try {
+        const res = await fetch('/api/quote/' + encodeURIComponent(tickerDisplay));
+        if (!res.ok) return;
+        const q = await res.json();
+        const wrap = document.getElementById('livePrice');
+        const value = document.getElementById('livePriceValue');
+        const change = document.getElementById('livePriceChange');
+        if (q.regularMarketPrice != null) {
+          const cur = q.currency === 'BRL' ? 'R$ ' : (q.currency ? q.currency + ' ' : '');
+          value.textContent = cur + fmt(q.regularMarketPrice);
+          if (q.regularMarketChangePercent != null) {
+            const ch = Number(q.regularMarketChangePercent);
+            change.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
+            change.classList.toggle('is-up', ch >= 0);
+            change.classList.toggle('is-down', ch < 0);
+          }
+          wrap.hidden = false;
+        }
+      } catch (_) {}
+    }
+
+    // ===== Verdict =====
+    function computeVerdict(analysis) {
+      const wins = [analysis.price.signal, analysis.rsi.signal, analysis.macd.signal, analysis.cross.signal];
+      const entries = wins.filter(s => s === 'entry').length;
+      const exits = wins.filter(s => s === 'exit').length;
+      if (entries >= 3) return { tone: 'up', icon: '📈', title: 'Sinais alinhados para alta', sub: 'Mais de um indicador aponta na mesma direção. Vale acompanhar.' };
+      if (exits >= 3) return { tone: 'down', icon: '📉', title: 'Sinais alinhados para baixa', sub: 'Vários indicadores apontam fraqueza. Cautela.' };
+      if (entries > exits) return { tone: 'mixed', icon: '🟡', title: 'Tendência levemente positiva', sub: 'Alguns sinais positivos, mas sem confirmação forte.' };
+      if (exits > entries) return { tone: 'mixed', icon: '🟡', title: 'Tendência levemente negativa', sub: 'Alguns sinais negativos, mas sem confirmação forte.' };
+      return { tone: 'neutral', icon: '⚖️', title: 'Mercado indefinido', sub: 'Os indicadores estão divididos. Melhor aguardar um sinal mais claro.' };
+    }
+
+    function renderVerdict(analysis) {
+      const v = computeVerdict(analysis);
+      const el = document.getElementById('verdict');
+      el.className = 'verdict verdict--' + v.tone;
+      el.querySelector('.verdict__icon').textContent = v.icon;
+      el.querySelector('.verdict__title').textContent = v.title;
+      el.querySelector('.verdict__sub').textContent = v.sub;
+    }
+
+    // ===== Indicators list =====
+    const SIGNAL_CLASSES = { entry: 'sig-chip--up', exit: 'sig-chip--down', neutral: 'sig-chip--neutral' };
+    const SIGNAL_LABEL = {
+      entry: 'Sinal positivo',
+      exit: 'Sinal negativo',
+      neutral: 'Neutro',
+    };
+
+    function indicatorRow(label, value, hint, signal, message, tooltip) {
+      return `
+        <div class="indicator-row">
+          <div>
+            <div class="indicator-row__label">${label} <span class="info-pill" data-tooltip="${tooltip}">?</span></div>
+            <div class="indicator-row__hint">${hint || ''}</div>
+          </div>
+          <div>
+            <div class="indicator-row__value">${value}</div>
+            <div class="indicator-row__signal"><span class="sig-chip ${SIGNAL_CLASSES[signal] || 'sig-chip--neutral'}">${message || SIGNAL_LABEL[signal] || ''}</span></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderIndicators(analysis) {
+      const el = document.getElementById('indicatorList');
+      el.innerHTML =
+        indicatorRow(
+          'Preço × média de 200 dias',
+          'R$ ' + fmt(analysis.price.value),
+          'Acima da MA200 sugere tendência de alta de longo prazo.',
+          analysis.price.signal,
+          analysis.price.message,
+          'A MA200 é a média móvel de 200 dias. Preço acima = mercado favorece alta no longo prazo. Abaixo = favorece baixa.'
+        ) +
+        indicatorRow(
+          'Força do movimento (RSI)',
+          fmt(analysis.rsi.value),
+          'Mede se o ativo está esticado para cima ou para baixo.',
+          analysis.rsi.signal,
+          analysis.rsi.message,
+          'RSI > 70: pode estar caro/esticado, próximo de uma pausa. RSI < 30: pode estar barato/esticado para baixo, próximo de uma reação.'
+        ) +
+        indicatorRow(
+          'Momentum (MACD)',
+          fmt(analysis.macd.value),
+          'Mostra se o preço está acelerando ou perdendo força.',
+          analysis.macd.signal,
+          analysis.macd.message,
+          'Quando a linha do MACD cruza acima da linha de sinal, o momentum está virando para cima. Cruzando abaixo, para baixo.'
+        ) +
+        indicatorRow(
+          'Cruzamento médias 50×200',
+          '—',
+          'Golden Cross (alta) ou Death Cross (baixa).',
+          analysis.cross.signal,
+          analysis.cross.message,
+          'A média de 50 dias é mais reativa que a de 200. Quando a curta cruza acima da longa, o mercado costuma ver isso como início de tendência de alta. O oposto é o Death Cross.'
+        );
+    }
+
+    // ===== Charts =====
+    async function fetchAndPlot(period) {
+      const errorBanner = document.getElementById('errorBanner');
+      errorBanner.hidden = true;
+      try {
+        const res = await fetch('/data/' + encodeURIComponent(tickerDisplay) + '?period=' + encodeURIComponent(period));
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || ('Erro ' + res.status));
+        }
+        const data = await res.json();
         currentData = data;
-        plausible('ticker_view', { ticker, period });
+        plausible('ticker_view', { ticker: tickerDisplay, period });
 
         const labels = data.dates.map(d => new Date(d).toLocaleDateString('pt-BR'));
         renderPriceChart(data, labels);
         if (showMacd) renderMacdChart(data);
-        updateAnalysis(data);
-      } catch (error) {
-        errorMessage.textContent = `⚠️ ${error.message}`;
-        errorMessage.style.display = 'block';
-        plausible('ticker_error', { ticker, period, message: error.message });
+
+        let initialIdx = data.closePrices.length - 1;
+        if (highlightDate) {
+          const targetMs = new Date(highlightDate).getTime();
+          let bestIdx = -1, bestDiff = Infinity;
+          for (let i = 0; i < data.dates.length; i++) {
+            const diff = Math.abs(new Date(data.dates[i]).getTime() - targetMs);
+            if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+          }
+          if (bestIdx >= 0) initialIdx = bestIdx;
+        }
+        updateAnalysis(data, initialIdx);
+      } catch (err) {
+        errorBanner.textContent = '⚠️ ' + err.message;
+        errorBanner.hidden = false;
+        plausible('ticker_error', { ticker: tickerDisplay, period, message: err.message });
       }
     }
 
     function renderPriceChart(data, labels) {
       if (priceChart) priceChart.destroy();
+      const cs = getComputedStyle(document.body);
+      const text = cs.getPropertyValue('--text').trim() || '#0f172a';
+      const muted = cs.getPropertyValue('--muted').trim() || '#64748b';
+      const border = cs.getPropertyValue('--border').trim() || '#e2e8f0';
 
       const datasets = [
-        { label: 'Preço', data: data.closePrices, borderColor: 'rgb(220, 38, 38)', backgroundColor: 'rgba(220, 38, 38, 0.08)', borderWidth: 1.5, fill: true, yAxisID: 'y', pointRadius: 0, tension: 0.1, order: 1 },
-        { label: 'MA50', data: data.sma50, borderColor: '#10b981', borderWidth: 1.5, fill: false, yAxisID: 'y', pointRadius: 0, order: 2 },
-        { label: 'MA200', data: data.sma200, borderColor: '#f59e0b', borderWidth: 1.5, fill: false, yAxisID: 'y', pointRadius: 0, order: 3 },
-        { label: 'RSI', data: data.rsi, borderColor: '#8b5cf6', borderWidth: 1, fill: false, yAxisID: 'y1', pointRadius: 0, order: 4, borderDash: [4, 4] },
-      ];
-
-      datasets.push(
+        { label: 'Preço', data: data.closePrices, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.08)', borderWidth: 1.5, fill: true, yAxisID: 'y', pointRadius: 0, tension: 0.1, order: 1 },
+        { label: 'MA 50d', data: data.sma50, borderColor: '#10b981', borderWidth: 1.5, fill: false, yAxisID: 'y', pointRadius: 0, order: 2 },
+        { label: 'MA 200d', data: data.sma200, borderColor: '#f59e0b', borderWidth: 1.5, fill: false, yAxisID: 'y', pointRadius: 0, order: 3 },
+        { label: 'RSI', data: data.rsi, borderColor: '#8b5cf6', borderWidth: 1, fill: false, yAxisID: 'y1', pointRadius: 0, order: 4, borderDash: [4,4] },
         {
-          label: 'Death Cross',
+          label: 'Cruz. baixa',
           data: data.closePrices.map((_, i) => {
             const p = data.crossPoints.find(p => p.type === 'death' && new Date(p.date).getTime() === new Date(data.dates[i]).getTime());
             return p ? p.value : null;
           }),
-          backgroundColor: '#ef4444', borderColor: '#ef4444', pointStyle: 'star',
-          pointRadius: 14, pointHoverRadius: 18, showLine: false, yAxisID: 'y', order: 0,
+          backgroundColor: '#ef4444', borderColor: '#ef4444', pointStyle: 'star', pointRadius: 14, pointHoverRadius: 18, showLine: false, yAxisID: 'y', order: 0,
         },
         {
-          label: 'Golden Cross',
+          label: 'Cruz. alta',
           data: data.closePrices.map((_, i) => {
             const p = data.crossPoints.find(p => p.type === 'golden' && new Date(p.date).getTime() === new Date(data.dates[i]).getTime());
             return p ? p.value : null;
           }),
-          backgroundColor: '#fbbf24', borderColor: '#fbbf24', pointStyle: 'star',
-          pointRadius: 14, pointHoverRadius: 18, showLine: false, yAxisID: 'y', order: 0,
+          backgroundColor: '#fbbf24', borderColor: '#fbbf24', pointStyle: 'star', pointRadius: 14, pointHoverRadius: 18, showLine: false, yAxisID: 'y', order: 0,
         },
         {
-          label: 'MACD bullish cross',
+          label: 'MACD ↑',
           data: data.closePrices.map((_, i) => {
             const p = data.macdCrossPoints.find(p => p.type === 'bullish_cross' && new Date(p.date).getTime() === new Date(data.dates[i]).getTime());
             return p ? p.value : null;
           }),
-          backgroundColor: '#10b981', borderColor: '#10b981', pointStyle: 'triangle',
-          pointRadius: 11, pointHoverRadius: 14, showLine: false, yAxisID: 'y', order: 0,
+          backgroundColor: '#10b981', borderColor: '#10b981', pointStyle: 'triangle', pointRadius: 11, pointHoverRadius: 14, showLine: false, yAxisID: 'y', order: 0,
         },
         {
-          label: 'MACD bearish cross',
+          label: 'MACD ↓',
           data: data.closePrices.map((_, i) => {
             const p = data.macdCrossPoints.find(p => p.type === 'bearish_cross' && new Date(p.date).getTime() === new Date(data.dates[i]).getTime());
             return p ? p.value : null;
           }),
-          backgroundColor: '#ef4444', borderColor: '#ef4444', pointStyle: 'triangle',
-          pointRadius: 11, pointHoverRadius: 14, rotation: 180, showLine: false, yAxisID: 'y', order: 0,
-        }
-      );
+          backgroundColor: '#ef4444', borderColor: '#ef4444', pointStyle: 'triangle', pointRadius: 11, pointHoverRadius: 14, rotation: 180, showLine: false, yAxisID: 'y', order: 0,
+        },
+      ];
 
       const ctx = document.getElementById('chart').getContext('2d');
       priceChart = new Chart(ctx, {
         type: 'line',
         data: { labels, datasets },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
+          responsive: true, maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
           scales: {
-            x: { title: { display: false }, ticks: { maxTicksLimit: 8 } },
-            y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Preço' } },
-            y1: { type: 'linear', display: true, position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false }, title: { display: true, text: 'RSI' } },
+            x: { ticks: { maxTicksLimit: 8, color: muted }, grid: { color: border } },
+            y: { type: 'linear', position: 'left', ticks: { color: muted }, grid: { color: border }, title: { display: true, text: 'Preço', color: muted } },
+            y1: { type: 'linear', position: 'right', min: 0, max: 100, ticks: { color: muted }, grid: { drawOnChartArea: false }, title: { display: true, text: 'RSI', color: muted } },
           },
           plugins: {
-            legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
+            legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12, font: { size: 11 }, color: text } },
             tooltip: {
               callbacks: {
                 label: (ctx) => {
-                  const label = ctx.dataset.label || '';
+                  const l = ctx.dataset.label || '';
                   const v = ctx.parsed.y;
-                  if (label === 'Golden Cross') return 'Golden Cross: MA50 cruzou acima da MA200';
-                  if (label === 'Death Cross') return 'Death Cross: MA50 cruzou abaixo da MA200';
-                  if (label === 'MACD bullish cross') return 'MACD: linha cruzou acima da linha de sinal';
-                  if (label === 'MACD bearish cross') return 'MACD: linha cruzou abaixo da linha de sinal';
-                  if (label === 'RSI') return `RSI: ${v == null ? '—' : v.toFixed(2)}`;
-                  return `${label}: ${v == null ? '—' : v.toFixed(2)}`;
+                  if (l === 'Cruz. alta') return 'Cruzamento de alta: média 50 acima da 200';
+                  if (l === 'Cruz. baixa') return 'Cruzamento de baixa: média 50 abaixo da 200';
+                  if (l === 'MACD ↑') return 'Momentum de alta (MACD)';
+                  if (l === 'MACD ↓') return 'Momentum de baixa (MACD)';
+                  if (l === 'RSI') return 'RSI: ' + (v == null ? '—' : v.toFixed(1));
+                  return l + ': ' + (v == null ? '—' : v.toFixed(2));
                 },
               },
             },
@@ -548,89 +502,103 @@
           },
         },
       });
-
-      document.getElementById('chart').parentElement.style.height = '480px';
     }
 
     function renderMacdChart(data) {
-      if (!showMacd) return;
       if (macdChart) macdChart.destroy();
-
+      const cs = getComputedStyle(document.body);
+      const muted = cs.getPropertyValue('--muted').trim() || '#64748b';
       const labels = data.dates.map(d => new Date(d).toLocaleDateString('pt-BR'));
-      const ctx = document.getElementById('macd-chart').getContext('2d');
+      const ctx = document.getElementById('macdChart').getContext('2d');
       macdChart = new Chart(ctx, {
         data: {
           labels,
           datasets: [
-            { type: 'bar', label: 'Histograma', data: data.macdHistogram, backgroundColor: data.macdHistogram.map(v => v == null ? 'transparent' : (v >= 0 ? 'rgba(16,185,129,0.7)' : 'rgba(239,68,68,0.7)')), borderWidth: 0, order: 2 },
+            { type: 'bar', label: 'Histograma', data: data.macdHistogram, backgroundColor: data.macdHistogram.map(v => v == null ? 'transparent' : (v >= 0 ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)')), borderWidth: 0, order: 2 },
             { type: 'line', label: 'MACD', data: data.macdLine, borderColor: '#2563eb', borderWidth: 1.5, fill: false, pointRadius: 0, order: 0 },
-            { type: 'line', label: 'Linha de sinal', data: data.macdSignal, borderColor: '#f59e0b', borderWidth: 1.5, fill: false, pointRadius: 0, borderDash: [4, 4], order: 1 },
+            { type: 'line', label: 'Linha de sinal', data: data.macdSignal, borderColor: '#f59e0b', borderWidth: 1.5, fill: false, pointRadius: 0, borderDash: [4,4], order: 1 },
           ],
         },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
+          responsive: true, maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
           scales: {
-            x: { ticks: { maxTicksLimit: 8 } },
-            y: { title: { display: true, text: 'MACD' } },
+            x: { ticks: { maxTicksLimit: 8, color: muted } },
+            y: { ticks: { color: muted }, title: { display: true, text: 'MACD', color: muted } },
           },
           plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } } },
         },
       });
-
-      document.getElementById('macd-chart').parentElement.style.height = '240px';
     }
-
-    document.querySelectorAll('.period-button').forEach(button => {
-      button.addEventListener('click', async () => {
-        document.querySelectorAll('.period-button').forEach(b => b.classList.remove('active'));
-        button.classList.add('active');
-        await fetchAndPlot(button.dataset.period);
-      });
-    });
-
-    fetchAndPlot('3M');
 
     function updateAnalysis(data, index) {
       if (!data) return;
       if (index == null) index = data.closePrices.length - 1;
-
-      const analysisDiv = document.getElementById('current-analysis');
-      const dateSpan = document.getElementById('analysis-date');
-
-      if (index < data.dates.length) {
-        dateSpan.textContent = `· ${new Date(data.dates[index]).toLocaleDateString('pt-BR')}`;
-      } else {
-        dateSpan.textContent = '';
-      }
-
+      document.getElementById('analysisDate').textContent = ' · ' + new Date(data.dates[index]).toLocaleDateString('pt-BR');
       const analysis = data.analysis[index];
-      const fmt = (v, suffix = '') => v == null || Number.isNaN(v) ? '—' : `${v.toFixed(2)}${suffix}`;
-
-      analysisDiv.innerHTML = `
-        <div class="indicator-status">
-          <span class="indicator-name">Preço vs MA200</span>
-          <span class="indicator-value">${fmt(analysis.price.value)}</span>
-          <span class="signal-${analysis.price.signal}">${analysis.price.message}</span>
-        </div>
-        <div class="indicator-status">
-          <span class="indicator-name">RSI (14)</span>
-          <span class="indicator-value">${fmt(analysis.rsi.value)}</span>
-          <span class="signal-${analysis.rsi.signal}">${analysis.rsi.message}</span>
-        </div>
-        <div class="indicator-status">
-          <span class="indicator-name">MACD</span>
-          <span class="indicator-value">${fmt(analysis.macd.value)}</span>
-          <span class="signal-${analysis.macd.signal}">${analysis.macd.message}</span>
-        </div>
-        <div class="indicator-status">
-          <span class="indicator-name">MA50 × MA200</span>
-          <span class="indicator-value"></span>
-          <span class="signal-${analysis.cross.signal}">${analysis.cross.message}</span>
-        </div>
-      `;
+      if (!analysis) return;
+      renderVerdict(analysis);
+      renderIndicators(analysis);
     }
+
+    // ===== Backtest =====
+    async function loadBacktest() {
+      try {
+        const res = await fetch('/api/backtest/' + encodeURIComponent(tickerDisplay));
+        if (!res.ok) {
+          document.getElementById('backtestContent').innerHTML = '<p style="color:var(--muted);margin:0">Sem histórico suficiente para backtest.</p>';
+          return;
+        }
+        const data = await res.json();
+        renderBacktest(data);
+      } catch (_) {
+        document.getElementById('backtestContent').innerHTML = '<p style="color:var(--muted);margin:0">Não foi possível carregar o backtest agora.</p>';
+      }
+    }
+
+    function renderBacktest(data) {
+      const blocks = [
+        { key: 'golden', label: '🟢 Cruzamento de alta', sub: 'O que aconteceu no preço depois?', positive: true },
+        { key: 'death', label: '🔴 Cruzamento de baixa', sub: 'O que aconteceu no preço depois?', positive: false },
+        { key: 'bullish_cross', label: '🔺 Momentum de alta (MACD)', sub: 'O que aconteceu no preço depois?', positive: true },
+        { key: 'bearish_cross', label: '🔻 Momentum de baixa (MACD)', sub: 'O que aconteceu no preço depois?', positive: false },
+      ];
+
+      const html = blocks.map(b => {
+        const stats = data[b.key];
+        if (!stats || stats.n === 0) {
+          return `<div class="card card--quiet" style="margin-bottom:10px"><h3 style="margin:0 0 4px">${b.label}</h3><p style="margin:0;color:var(--muted);font-size:13px">Nenhuma ocorrência nos últimos 5 anos.</p></div>`;
+        }
+        const tiles = Object.entries(stats.horizons).map(([h, s]) => {
+          if (s.n === 0) return '';
+          const cls = b.positive ? (s.avg >= 0 ? 'is-up' : 'is-down') : (s.avg <= 0 ? 'is-up' : 'is-down');
+          return `
+            <div class="backtest-tile">
+              <div class="backtest-tile__horizon">${h} pregões</div>
+              <div class="backtest-tile__value ${cls}">${fmtPct(s.avg)}</div>
+              <div class="backtest-tile__detail">acerto ${(s.hitRate * 100).toFixed(0)}% · n=${s.n}</div>
+            </div>
+          `;
+        }).join('');
+        return `
+          <div class="card card--quiet" style="margin-bottom:10px">
+            <h3 style="margin:0 0 4px">${b.label}</h3>
+            <p style="margin:0 0 10px;color:var(--muted);font-size:12px">${stats.n} ocorrência${stats.n === 1 ? '' : 's'} históricas · ${b.sub}</p>
+            <div class="backtest-grid">${tiles}</div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('backtestContent').innerHTML = html + `<p style="margin:12px 0 0;color:var(--muted);font-size:11px">Retorno médio do ativo nos N pregões seguintes ao sinal. <b>Performance passada não garante o futuro.</b></p>`;
+    }
+
+    // ===== Boot =====
+    document.addEventListener('DOMContentLoaded', () => {
+      loadFavoriteState();
+      loadQuote();
+      fetchAndPlot(initialPeriod);
+      loadBacktest();
+    });
   </script>
 </body>
 </html>

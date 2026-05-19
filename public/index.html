@@ -2,9 +2,10 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>{{page_title}}</title>
   <meta name="description" content="{{page_description}}">
+  <meta name="robots" content="{{robots}}">
   <link rel="canonical" href="{{canonical_url}}">
   <meta property="og:type" content="website">
   <meta property="og:title" content="{{page_title}}">
@@ -20,17 +21,19 @@
   <meta name="twitter:title" content="{{page_title}}">
   <meta name="twitter:description" content="{{page_description}}">
   <meta name="twitter:image" content="{{og_image}}">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="apple-touch-icon" href="/favicon.svg">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
       "name": "Stock Signals",
-      "description": "Análise técnica gratuita para ações da B3, BDRs, ETFs, criptomoedas e câmbio com sinais automáticos.",
+      "description": "Análise técnica gratuita para B3, BDRs, ETFs, cripto e câmbio.",
       "url": "{{canonical_url}}",
       "applicationCategory": "FinanceApplication",
       "operatingSystem": "Web",
@@ -39,438 +42,130 @@
     }
   </script>
   <script defer data-domain="stock-signals.vercel.app" src="https://plausible.io/js/script.js"></script>
-  <style>
-    .hero {
-      text-align: center;
-      padding: 48px 16px 32px;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      color: #f8fafc;
-      border-radius: 12px;
-      margin-bottom: 32px;
-    }
-    .hero h1 {
-      font-size: clamp(28px, 5vw, 44px);
-      margin: 0 0 12px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-    }
-    .hero p {
-      color: #cbd5e1;
-      max-width: 640px;
-      margin: 0 auto 24px;
-      font-size: 17px;
-    }
-    .search-wrap {
-      max-width: 480px;
-      margin: 0 auto;
-      position: relative;
-    }
-    .search-input {
-      width: 100%;
-      padding: 14px 18px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.2);
-      background: rgba(255,255,255,0.95);
-      color: #0f172a;
-      font-size: 16px;
-      box-sizing: border-box;
-      outline: none;
-    }
-    .search-input:focus {
-      box-shadow: 0 0 0 3px rgba(16,185,129,0.4);
-    }
-    .search-results {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: calc(100% + 6px);
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 12px 32px rgba(0,0,0,0.18);
-      overflow: hidden;
-      z-index: 10;
-      max-height: 320px;
-      overflow-y: auto;
-      text-align: left;
-    }
-    .search-results:empty { display: none; }
-    .search-item {
-      display: block;
-      padding: 10px 16px;
-      color: #0f172a;
-      text-decoration: none;
-      border-bottom: 1px solid #f1f5f9;
-    }
-    .search-item:last-child { border-bottom: none; }
-    .search-item:hover, .search-item.is-active { background: #f1f5f9; }
-    .search-item small { color: #64748b; }
-    .example {
-      background-color: var(--surface);
-      padding: 24px;
-      border-radius: 12px;
-      margin: 24px 0;
-    }
-    .stocks-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 12px;
-      margin-top: 12px;
-    }
-    .stock-category { margin-top: 24px; }
-    .stock-category:first-child { margin-top: 8px; }
-    .stock-category h3 {
-      color: var(--text);
-      margin: 0 0 12px;
-      font-size: 16px;
-      letter-spacing: 0.3px;
-    }
-    .stock-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: white;
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: 1px solid #e2e8f0;
-    }
-    .stock-link {
-      color: var(--brand);
-      text-decoration: none;
-      flex: 1;
-      font-size: 14px;
-    }
-    .stock-link:hover { text-decoration: underline; }
-    .favorite-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 1.1em;
-      padding: 2px 4px;
-      transition: transform 0.15s;
-      color: #cbd5e1;
-    }
-    .favorite-btn:hover { transform: scale(1.2); }
-    .favorite-btn.active { color: #f1c40f; }
-    #favorites-category {
-      background-color: #fffbeb;
-      padding: 24px;
-      border-radius: 12px;
-      margin-bottom: 24px;
-      display: none;
-      border: 1px solid #fde68a;
-    }
-    #favorites-category.has-favorites { display: block; }
-    .view-favorites-link {
-      display: inline-block;
-      padding: 8px 16px;
-      background-color: #f59e0b;
-      color: white;
-      text-decoration: none;
-      border-radius: 6px;
-      margin-top: 12px;
-      font-weight: 600;
-      font-size: 14px;
-    }
-    .view-favorites-link:hover { background-color: #d97706; }
-    .framework {
-      margin-top: 40px;
-      padding: 32px;
-      background-color: var(--surface);
-      border-radius: 12px;
-    }
-    .framework h2 {
-      color: var(--text);
-      margin: 0 0 20px;
-      text-align: center;
-    }
-    .framework h3 { color: var(--brand); margin: 25px 0 12px; }
-    .framework ul { margin: 8px 0; padding-left: 20px; }
-    .framework li { margin: 6px 0; }
-    .framework-section { margin-bottom: 24px; }
-    .example-box {
-      background-color: #e0f2fe;
-      padding: 18px;
-      border-radius: 8px;
-      margin: 16px 0;
-    }
-    .example-box h4 { color: var(--brand); margin: 0 0 10px; }
-  </style>
+  <script src="/js/app-shell.js" defer></script>
 </head>
 <body>
-  <section class="hero">
-    <h1>Sinais técnicos da B3, sem ruído</h1>
-    <p>Golden Cross, MACD, RSI e mais — análise automática para ações brasileiras, BDRs, ETFs, criptomoedas e câmbio. Grátis, educacional, sem cadastro.</p>
-    <div class="search-wrap">
-      <input id="search-input" class="search-input" type="search" placeholder="Buscar ativo (ex.: Petrobras, AAPL, BTC-USD)" autocomplete="off" aria-label="Buscar ativo">
-      <div id="search-results" class="search-results" role="listbox"></div>
-    </div>
-  </section>
+  {{app_shell}}
 
-  <div id="favorites-category" class="stock-category">
-    <h3>⭐ Seus favoritos</h3>
-    <div id="favorites-grid" class="stocks-grid"></div>
-    <a href="/favorites.html" class="view-favorites-link">Ver meus favoritos com gráficos →</a>
-  </div>
+  <main class="container">
+    <section class="hero fade-up">
+      <h1>Sinais de compra e venda, em português, sem jargão.</h1>
+      <p>A gente lê o gráfico por você e mostra quando vale a pena olhar. Funciona para ações da B3, BDRs, ETFs, cripto e câmbio. Grátis e educacional.</p>
+      <a href="/sinais" class="hero__cta">
+        Ver sinais do dia
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </a>
+    </section>
 
-  <div class="example">
-    <div class="stock-category">
-      <h3>🏦 Bancos</h3>
-      <div class="stocks-grid">
-        <a href="/ITUB4" class="stock-link">ITUB4 — Itaú Unibanco</a>
-        <a href="/BBDC4" class="stock-link">BBDC4 — Bradesco</a>
-        <a href="/BBAS3" class="stock-link">BBAS3 — Banco do Brasil</a>
-        <a href="/SANB11" class="stock-link">SANB11 — Santander</a>
+    <section class="fade-up" aria-labelledby="value-prop-title">
+      <h2 id="value-prop-title" class="sr-only">Como funciona</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:24px">
+        <div class="card">
+          <div style="font-size:24px;margin-bottom:8px">📊</div>
+          <h3 style="margin-bottom:4px">Indicadores clássicos</h3>
+          <p style="font-size:13px;margin:0">MA50, MA200, RSI e MACD — apresentados com explicações em linguagem cotidiana.</p>
+        </div>
+        <div class="card">
+          <div style="font-size:24px;margin-bottom:8px">🎯</div>
+          <h3 style="margin-bottom:4px">Sinais automáticos</h3>
+          <p style="font-size:13px;margin:0">Cruzamentos de alta e baixa, momentum do MACD e zonas de sobrevenda/sobrecompra marcados no gráfico.</p>
+        </div>
+        <div class="card">
+          <div style="font-size:24px;margin-bottom:8px">📱</div>
+          <h3 style="margin-bottom:4px">No celular ou desktop</h3>
+          <p style="font-size:13px;margin:0">Funciona como app: salvar favoritos, alertas por e-mail, modo escuro.</p>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <div class="stock-category">
-      <h3>🛢️ Commodities</h3>
-      <div class="stocks-grid">
-        <a href="/PETR4" class="stock-link">PETR4 — Petrobras PN</a>
-        <a href="/PETR3" class="stock-link">PETR3 — Petrobras ON</a>
-        <a href="/VALE3" class="stock-link">VALE3 — Vale</a>
-        <a href="/CSNA3" class="stock-link">CSNA3 — CSN</a>
-        <a href="/GGBR4" class="stock-link">GGBR4 — Gerdau</a>
+    <section class="category-section fade-up">
+      <div class="category-section__title">
+        <span>🏦</span><span>Bancos</span>
       </div>
-    </div>
-
-    <div class="stock-category">
-      <h3>🛍️ Varejo</h3>
-      <div class="stocks-grid">
-        <a href="/MGLU3" class="stock-link">MGLU3 — Magazine Luiza</a>
-        <a href="/LREN3" class="stock-link">LREN3 — Lojas Renner</a>
-        <a href="/AMER3" class="stock-link">AMER3 — Americanas</a>
+      <div class="asset-grid">
+        <a href="/ITUB4" class="asset-card"><span class="asset-card__symbol">ITUB4</span><span class="asset-card__name">Itaú Unibanco</span></a>
+        <a href="/BBDC4" class="asset-card"><span class="asset-card__symbol">BBDC4</span><span class="asset-card__name">Bradesco</span></a>
+        <a href="/BBAS3" class="asset-card"><span class="asset-card__symbol">BBAS3</span><span class="asset-card__name">Banco do Brasil</span></a>
+        <a href="/SANB11" class="asset-card"><span class="asset-card__symbol">SANB11</span><span class="asset-card__name">Santander</span></a>
       </div>
-    </div>
+    </section>
 
-    <div class="stock-category">
-      <h3>📱 Tecnologia</h3>
-      <div class="stocks-grid">
-        <a href="/TOTS3" class="stock-link">TOTS3 — Totvs</a>
-        <a href="/LWSA3" class="stock-link">LWSA3 — Locaweb</a>
-        <a href="/CASH3" class="stock-link">CASH3 — Méliuz</a>
-        <a href="/POSI3" class="stock-link">POSI3 — Positivo</a>
+    <section class="category-section fade-up">
+      <div class="category-section__title"><span>🛢️</span><span>Commodities</span></div>
+      <div class="asset-grid">
+        <a href="/PETR4" class="asset-card"><span class="asset-card__symbol">PETR4</span><span class="asset-card__name">Petrobras PN</span></a>
+        <a href="/PETR3" class="asset-card"><span class="asset-card__symbol">PETR3</span><span class="asset-card__name">Petrobras ON</span></a>
+        <a href="/VALE3" class="asset-card"><span class="asset-card__symbol">VALE3</span><span class="asset-card__name">Vale</span></a>
+        <a href="/CSNA3" class="asset-card"><span class="asset-card__symbol">CSNA3</span><span class="asset-card__name">CSN</span></a>
+        <a href="/GGBR4" class="asset-card"><span class="asset-card__symbol">GGBR4</span><span class="asset-card__name">Gerdau</span></a>
       </div>
-    </div>
+    </section>
 
-    <div class="stock-category">
-      <h3>🌎 BDRs e ações US</h3>
-      <div class="stocks-grid">
-        <a href="/AAPL34" class="stock-link">AAPL34 — Apple BDR</a>
-        <a href="/MSFT34" class="stock-link">MSFT34 — Microsoft BDR</a>
-        <a href="/GOGL34" class="stock-link">GOGL34 — Google BDR</a>
-        <a href="/AMZO34" class="stock-link">AMZO34 — Amazon BDR</a>
-        <a href="/TSLA34" class="stock-link">TSLA34 — Tesla BDR</a>
-        <a href="/AAPL" class="stock-link">AAPL — Apple (NASDAQ)</a>
-        <a href="/MSFT" class="stock-link">MSFT — Microsoft</a>
-        <a href="/NVDA" class="stock-link">NVDA — NVIDIA</a>
+    <section class="category-section fade-up">
+      <div class="category-section__title"><span>🛍️</span><span>Varejo</span></div>
+      <div class="asset-grid">
+        <a href="/MGLU3" class="asset-card"><span class="asset-card__symbol">MGLU3</span><span class="asset-card__name">Magazine Luiza</span></a>
+        <a href="/LREN3" class="asset-card"><span class="asset-card__symbol">LREN3</span><span class="asset-card__name">Lojas Renner</span></a>
+        <a href="/AMER3" class="asset-card"><span class="asset-card__symbol">AMER3</span><span class="asset-card__name">Americanas</span></a>
       </div>
-    </div>
+    </section>
 
-    <div class="stock-category">
-      <h3>📊 ETFs</h3>
-      <div class="stocks-grid">
-        <a href="/BOVA11" class="stock-link">BOVA11 — iShares Ibovespa</a>
-        <a href="/IVVB11" class="stock-link">IVVB11 — iShares S&P 500</a>
-        <a href="/SMAL11" class="stock-link">SMAL11 — iShares Small Cap</a>
-        <a href="/HASH11" class="stock-link">HASH11 — ETF Blockchain</a>
+    <section class="category-section fade-up">
+      <div class="category-section__title"><span>📱</span><span>Tecnologia</span></div>
+      <div class="asset-grid">
+        <a href="/TOTS3" class="asset-card"><span class="asset-card__symbol">TOTS3</span><span class="asset-card__name">Totvs</span></a>
+        <a href="/LWSA3" class="asset-card"><span class="asset-card__symbol">LWSA3</span><span class="asset-card__name">Locaweb</span></a>
+        <a href="/CASH3" class="asset-card"><span class="asset-card__symbol">CASH3</span><span class="asset-card__name">Méliuz</span></a>
+        <a href="/POSI3" class="asset-card"><span class="asset-card__symbol">POSI3</span><span class="asset-card__name">Positivo</span></a>
       </div>
-    </div>
+    </section>
 
-    <div class="stock-category">
-      <h3>₿ Cripto e câmbio</h3>
-      <div class="stocks-grid">
-        <a href="/BTC-USD" class="stock-link">BTC-USD — Bitcoin</a>
-        <a href="/ETH-USD" class="stock-link">ETH-USD — Ethereum</a>
-        <a href="/SOL-USD" class="stock-link">SOL-USD — Solana</a>
-        <a href="/USDBRL=X" class="stock-link">USDBRL — Dólar</a>
-        <a href="/EURBRL=X" class="stock-link">EURBRL — Euro</a>
+    <section class="category-section fade-up">
+      <div class="category-section__title"><span>🌎</span><span>BDRs e ações dos EUA</span></div>
+      <div class="asset-grid">
+        <a href="/AAPL34" class="asset-card"><span class="asset-card__symbol">AAPL34</span><span class="asset-card__name">Apple BDR</span></a>
+        <a href="/MSFT34" class="asset-card"><span class="asset-card__symbol">MSFT34</span><span class="asset-card__name">Microsoft BDR</span></a>
+        <a href="/GOGL34" class="asset-card"><span class="asset-card__symbol">GOGL34</span><span class="asset-card__name">Google BDR</span></a>
+        <a href="/TSLA34" class="asset-card"><span class="asset-card__symbol">TSLA34</span><span class="asset-card__name">Tesla BDR</span></a>
+        <a href="/AAPL" class="asset-card"><span class="asset-card__symbol">AAPL</span><span class="asset-card__name">Apple (NASDAQ)</span></a>
+        <a href="/MSFT" class="asset-card"><span class="asset-card__symbol">MSFT</span><span class="asset-card__name">Microsoft</span></a>
+        <a href="/NVDA" class="asset-card"><span class="asset-card__symbol">NVDA</span><span class="asset-card__name">NVIDIA</span></a>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <div class="framework">
-    <h2>Framework para identificar pontos de entrada e saída</h2>
-
-    <div class="framework-section">
-      <h3>1. Tendência (MA50 e MA200)</h3>
-      <ul>
-        <li>Preço acima da MA200 → tendência de alta.</li>
-        <li>Preço abaixo da MA200 → tendência de baixa.</li>
-        <li>Golden Cross (MA50 cruza acima da MA200) → entrada.</li>
-        <li>Death Cross (MA50 cruza abaixo da MA200) → saída.</li>
-      </ul>
-    </div>
-
-    <div class="framework-section">
-      <h3>2. Força relativa (RSI)</h3>
-      <ul>
-        <li>RSI &lt; 30 e começando a subir → potencial reversão para alta.</li>
-        <li>RSI &gt; 70 e começando a cair → potencial reversão para baixa.</li>
-        <li>Divergência preço × RSI → atenção a reversões.</li>
-      </ul>
-    </div>
-
-    <div class="framework-section">
-      <h3>3. Momentum (MACD)</h3>
-      <ul>
-        <li>MACD cruza <strong>acima</strong> da linha de sinal → momentum de alta (entrada).</li>
-        <li>MACD cruza <strong>abaixo</strong> da linha de sinal → momentum de baixa (saída).</li>
-        <li>Histograma crescente confirma a força da tendência.</li>
-      </ul>
-    </div>
-
-    <div class="framework-section">
-      <h3>4. Combinação dos indicadores</h3>
-      <p><strong>Compra ideal:</strong></p>
-      <ul>
-        <li>Preço acima da MA200.</li>
-        <li>RSI saindo da zona de sobrevenda.</li>
-        <li>MACD cruzando acima da linha de sinal ou histograma crescente.</li>
-        <li>Preferencialmente após um Golden Cross.</li>
-      </ul>
-      <p><strong>Venda ideal:</strong></p>
-      <ul>
-        <li>Preço abaixo da MA200.</li>
-        <li>RSI saindo da zona de sobrecompra.</li>
-        <li>MACD cruzando abaixo da linha de sinal ou histograma decrescente.</li>
-        <li>Preferencialmente após um Death Cross.</li>
-      </ul>
-    </div>
-
-    <div class="framework-section">
-      <h3>Regras adicionais</h3>
-      <ul>
-        <li>Em mercado lateral, exija pelo menos dois indicadores alinhados antes de agir.</li>
-        <li>Defina stop-loss e take-profit antes da operação.</li>
-        <li>Combine com análise fundamentalista — técnica é gatilho, não tese.</li>
-      </ul>
-    </div>
-
-    <div class="framework-section">
-      <h3>Exemplo prático</h3>
-      <div class="example-box">
-        <h4>Cenário de compra</h4>
-        <ul>
-          <li>Preço acima da MA200, MA50 cruza acima da MA200 (Golden Cross).</li>
-          <li>RSI em 40 e subindo (saindo da sobrevenda).</li>
-          <li>MACD cruza acima da linha de sinal, histograma crescente.</li>
-          <li><strong>Resultado:</strong> forte sinal de compra.</li>
-        </ul>
-        <h4>Cenário de venda</h4>
-        <ul>
-          <li>RSI atinge 75; MACD cruza abaixo da linha de sinal; histograma negativo.</li>
-          <li><strong>Resultado:</strong> forte sinal de venda.</li>
-        </ul>
+    <section class="category-section fade-up">
+      <div class="category-section__title"><span>📊</span><span>ETFs</span></div>
+      <div class="asset-grid">
+        <a href="/BOVA11" class="asset-card"><span class="asset-card__symbol">BOVA11</span><span class="asset-card__name">iShares Ibovespa</span></a>
+        <a href="/IVVB11" class="asset-card"><span class="asset-card__symbol">IVVB11</span><span class="asset-card__name">iShares S&amp;P 500</span></a>
+        <a href="/SMAL11" class="asset-card"><span class="asset-card__symbol">SMAL11</span><span class="asset-card__name">Small Caps</span></a>
+        <a href="/HASH11" class="asset-card"><span class="asset-card__symbol">HASH11</span><span class="asset-card__name">ETF Blockchain</span></a>
       </div>
-      <p><em>Esse framework combina indicadores complementares para reduzir falsos sinais. Não é recomendação de investimento.</em></p>
-    </div>
-  </div>
+    </section>
 
-  <footer style="margin-top:48px; padding:24px 0; text-align:center; color:#64748b; font-size:14px;">
-    Stock Signals · feito para fins educacionais · <a href="https://github.com/chicomcastro/stock-signals" style="color:#64748b;">código no GitHub</a>
-  </footer>
+    <section class="category-section fade-up">
+      <div class="category-section__title"><span>₿</span><span>Cripto e câmbio</span></div>
+      <div class="asset-grid">
+        <a href="/BTC-USD" class="asset-card"><span class="asset-card__symbol">BTC-USD</span><span class="asset-card__name">Bitcoin</span></a>
+        <a href="/ETH-USD" class="asset-card"><span class="asset-card__symbol">ETH-USD</span><span class="asset-card__name">Ethereum</span></a>
+        <a href="/SOL-USD" class="asset-card"><span class="asset-card__symbol">SOL-USD</span><span class="asset-card__name">Solana</span></a>
+        <a href="/USDBRL=X" class="asset-card"><span class="asset-card__symbol">USDBRL</span><span class="asset-card__name">Dólar</span></a>
+        <a href="/EURBRL=X" class="asset-card"><span class="asset-card__symbol">EURBRL</span><span class="asset-card__name">Euro</span></a>
+      </div>
+    </section>
+
+    <footer class="app-footer">
+      Stock Signals · Apenas educacional, não é recomendação de investimento. · <a href="https://github.com/chicomcastro/stock-signals">Código no GitHub</a>
+    </footer>
+  </main>
 
   <script>
-    function loadFavorites() {
-      const favorites = JSON.parse(localStorage.getItem('stockFavorites')) || {};
-      const grid = document.getElementById('favorites-grid');
-      const wrap = document.getElementById('favorites-category');
-      grid.innerHTML = '';
-
-      Object.entries(favorites).forEach(([ticker, name]) => {
-        const item = document.createElement('div');
-        item.className = 'stock-item';
-        item.innerHTML = `
-          <a href="/${ticker}" class="stock-link">${ticker} — ${name}</a>
-          <button class="favorite-btn active" aria-label="Remover ${ticker} dos favoritos">★</button>
-        `;
-        item.querySelector('button').addEventListener('click', () => toggleFavorite(ticker, name));
-        grid.appendChild(item);
-      });
-
-      wrap.classList.toggle('has-favorites', Object.keys(favorites).length > 0);
-    }
-
-    function toggleFavorite(ticker, name) {
-      const favorites = JSON.parse(localStorage.getItem('stockFavorites')) || {};
-      if (favorites[ticker]) delete favorites[ticker];
-      else favorites[ticker] = name;
-      localStorage.setItem('stockFavorites', JSON.stringify(favorites));
-      loadFavorites();
-    }
-
-    const input = document.getElementById('search-input');
-    const resultsEl = document.getElementById('search-results');
-    let activeIndex = -1;
-    let lastResults = [];
-    let debounce;
-
-    async function runSearch(query) {
-      if (query.length < 2) {
-        resultsEl.innerHTML = '';
-        lastResults = [];
-        return;
-      }
-      try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-        const items = await res.json();
-        lastResults = items;
-        renderResults(items);
-      } catch (_) {}
-    }
-
-    function renderResults(items) {
-      resultsEl.innerHTML = '';
-      items.slice(0, 8).forEach((it, idx) => {
-        const a = document.createElement('a');
-        a.className = 'search-item';
-        a.href = `/${it.symbol}`;
-        a.setAttribute('role', 'option');
-        a.innerHTML = `<strong>${it.symbol}</strong> · <span>${it.shortname || ''}</span> <small>${it.exchange || ''}</small>`;
-        a.addEventListener('mouseenter', () => setActive(idx));
-        resultsEl.appendChild(a);
-      });
-      activeIndex = -1;
-    }
-
-    function setActive(idx) {
-      activeIndex = idx;
-      [...resultsEl.children].forEach((el, i) => el.classList.toggle('is-active', i === idx));
-    }
-
-    input.addEventListener('input', (e) => {
-      clearTimeout(debounce);
-      debounce = setTimeout(() => runSearch(e.target.value.trim()), 200);
-    });
-
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowDown') { e.preventDefault(); setActive(Math.min(activeIndex + 1, resultsEl.children.length - 1)); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(Math.max(activeIndex - 1, 0)); }
-      else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (activeIndex >= 0 && lastResults[activeIndex]) {
-          window.location.href = `/${lastResults[activeIndex].symbol}`;
-        } else if (input.value.trim()) {
-          window.location.href = `/${encodeURIComponent(input.value.trim().toUpperCase())}`;
-        }
-      } else if (e.key === 'Escape') {
-        resultsEl.innerHTML = '';
+    // Auto-open search if ?search=1
+    document.addEventListener('DOMContentLoaded', () => {
+      if (new URLSearchParams(window.location.search).get('search')) {
+        setTimeout(() => window.SS && window.SS.openSearch && window.SS.openSearch(), 200);
       }
     });
-
-    document.addEventListener('click', (e) => {
-      if (!resultsEl.contains(e.target) && e.target !== input) resultsEl.innerHTML = '';
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === '/' && document.activeElement !== input) {
-        e.preventDefault();
-        input.focus();
-      }
-    });
-
-    document.addEventListener('DOMContentLoaded', loadFavorites);
   </script>
 </body>
 </html>
