@@ -78,9 +78,10 @@ jobs:
         if: github.event_name == 'pull_request' && always()
         run: |
           mkdir -p _comment_screenshots
-          find test-results -name "*.png" ! -name "test-failed-*.png" | while read f; do
-            name=$(basename "$(dirname "$f")")-$(basename "$f")
-            cp "$f" "_comment_screenshots/$name"
+          find test-results -mindepth 2 -maxdepth 2 -name "*.png" ! -name "test-failed-*.png" | while read f; do
+            scenario_dir=$(basename "$(dirname "$f")")
+            file=$(basename "$f")
+            cp "$f" "_comment_screenshots/${scenario_dir}-${file}"
           done
           ls -la _comment_screenshots/ || true
       - name: Push screenshots to previews branch
@@ -153,16 +154,18 @@ jobs:
               groups[test][view] = { url: `${base}/${f}`, filename };
             }
 
+            const scenarios = Object.entries(groups).filter(([_, v]) => v.desktop || v.mobile);
             let body = '## E2E screenshots\n\n';
-            body += `Total: **${files.length}** captures · Commit \`${sha.slice(0,7)}\`\n\n`;
+            body += `**${scenarios.length}** cenários × 2 viewports · Commit \`${sha.slice(0,7)}\`\n\n`;
             body += '| Scenario | Desktop (1280×800) | Mobile (Pixel 7) |\n';
             body += '|---|---|---|\n';
-            for (const [test, views] of Object.entries(groups)) {
+            for (const [test, views] of scenarios) {
+              const friendly = test.replace(/-/g, ' ').replace(/^(home|ticker|favorites) /, '$1: ');
               const d = views.desktop ? `<img src="${views.desktop.url}" width="380">` : '—';
               const m = views.mobile ? `<img src="${views.mobile.url}" width="200">` : '—';
-              body += `| \`${test}\` | ${d} | ${m} |\n`;
+              body += `| ${friendly} | ${d} | ${m} |\n`;
             }
-            body += `\n<sub>Hospedados em \`ci-previews\` branch. Run #${context.runId}.</sub>`;
+            body += `\n<sub>Hospedados em branch \`ci-previews\`. Run #${context.runId}.</sub>`;
 
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner, repo: context.repo.repo,
