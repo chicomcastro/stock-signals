@@ -1,0 +1,17 @@
+{
+  "name": "Stock Signals",
+  "short_name": "Stock Signals",
+  "description": "Análise técnica gratuita: Golden Cross, MACD, RSI para B3, BDRs, cripto e FX.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ]
+}

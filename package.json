@@ -1,21 +1,41 @@
 {
   "name": "stock-signals",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.1.0",
+  "description": "Análise técnica de ações da B3, BDRs, cripto e FX com sinais automáticos (Golden/Death Cross, RSI, MACD).",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon src/index.js --watch src --watch public"
+    "dev": "nodemon src/index.js --watch src --watch public",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
-  "author": "",
-  "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "stocks",
+    "b3",
+    "technical-analysis",
+    "macd",
+    "rsi",
+    "golden-cross",
+    "trading",
+    "finance"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chicomcastro/stock-signals.git"
+  },
+  "license": "MIT",
   "dependencies": {
     "chart.js": "^4.4.7",
     "express": "^4.21.2",
+    "express-rate-limit": "^7.4.1",
     "technicalindicators": "^3.1.0",
     "yahoo-finance2": "^2.13.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "nodemon": "^3.1.0",
+    "vitest": "^2.1.8"
   }
 }
