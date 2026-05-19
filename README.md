@@ -6,17 +6,18 @@ Análise técnica gratuita para ações da B3, BDRs, ETFs, criptomoedas e câmbi
 
 ## Funcionalidades
 
-- **Visualização de preço** com Chart.js e médias móveis MA50 e MA200.
-- **Indicadores técnicos** clássicos: RSI(14) e MACD (linha, linha de sinal e histograma).
-- **Sinais automáticos** marcados no gráfico:
-  - ⭐ Golden Cross (MA50 cruza acima da MA200) e Death Cross
-  - 🔺 MACD bullish/bearish cross (linha do MACD cruza a linha de sinal)
-- **Análise diária** com interpretação por indicador — clique em qualquer ponto do gráfico para ver a análise daquele pregão.
+- **Sinais do dia** (`/sinais`) — screener com Golden/Death Cross, momentum MACD, sobrevenda/sobrecompra do RSI nos últimos pregões.
+- **Análise por ativo** com gráfico interativo (Chart.js), médias móveis 50/200, RSI e MACD (linha, linha de sinal, histograma).
+- **Veredicto amigável** — combina os 4 indicadores em uma frase ("Sinais alinhados para alta", "Mercado indefinido", etc.).
+- **Backtest** — para cada sinal histórico, mostra retorno médio nos 30/60/90 pregões seguintes + taxa de acerto.
+- **Alertas por e-mail** (`/alertas`) — receba aviso quando sinais aparecem nos seus ativos.
+- **Deep links** — `/PETR4?period=6M&date=2024-06-15&highlight=golden` abre direto no ponto.
+- **Compartilhamento** com Open Graph dinâmico por ativo + Web Share API no mobile.
 - **Cobertura ampla**: ações da B3, BDRs, ações americanas, ETFs, criptomoedas (`BTC-USD`), câmbio (`USDBRL=X`) e índices (`^BVSP`).
-- **Busca por nome** com autocomplete (atalho `/` para focar).
-- **Favoritos** persistidos no navegador (LocalStorage).
-- **Compartilhamento** com Open Graph dinâmico por ativo.
-- **PWA leve** — adicione à tela inicial.
+- **Busca por nome** com autocomplete (atalho `/` em qualquer página).
+- **Favoritos** persistidos no navegador com mini-sparkline.
+- **PWA + dark mode** — adicione à tela inicial; tema automático ou manual.
+- **Mobile native-app feel** — bottom tab navigation, top app bar com blur, transições suaves, gestures.
 
 ## Stack
 
@@ -103,16 +104,23 @@ public/
 
 ## Endpoints
 
-| Endpoint                  | Descrição                                              |
-| ------------------------- | ------------------------------------------------------ |
-| `GET /`                   | Landing                                                |
-| `GET /:ticker`            | Página de análise (ex.: `/PETR4`, `/AAPL`, `/BTC-USD`) |
-| `GET /data/:ticker`       | JSON com preços, indicadores e análise                 |
-| `GET /api/search?q=`      | Busca por nome/símbolo                                 |
-| `GET /api/quote/:ticker`  | Cotação resumida                                       |
-| `GET /og/:ticker.svg`     | Imagem SVG para Open Graph                             |
-| `GET /sitemap.xml`        | Sitemap                                                |
-| `GET /robots.txt`         | Robots                                                 |
+| Endpoint                                     | Descrição                                                             |
+| -------------------------------------------- | --------------------------------------------------------------------- |
+| `GET /`                                      | Landing                                                               |
+| `GET /sinais`                                | Sinais do dia (screener)                                              |
+| `GET /alertas`                               | Cadastro de alertas por e-mail                                        |
+| `GET /favorites`                             | Watchlist com mini-sparkline                                          |
+| `GET /:ticker`                               | Página de análise (`/PETR4`, `/AAPL`, `/BTC-USD?period=6M&date=...`)  |
+| `GET /data/:ticker`                          | JSON com preços, indicadores e análise diária                         |
+| `GET /api/backtest/:ticker`                  | Estatísticas históricas dos sinais (30/60/90 pregões)                 |
+| `GET /api/signals[?universe=PETR4,AAPL]`     | Sinais agregados em todo o universo nos últimos pregões               |
+| `GET /api/search?q=`                         | Busca por nome/símbolo                                                |
+| `GET /api/quote/:ticker`                     | Cotação resumida                                                      |
+| `POST /api/alerts/subscribe`                 | Inscrever e-mail + tickers para receber alertas                       |
+| `GET /api/alerts/confirm/:token`             | Confirmar inscrição (double opt-in)                                   |
+| `GET /api/alerts/unsubscribe/:token`         | Cancelar inscrição                                                    |
+| `GET /og/:ticker.svg`                        | Imagem SVG para Open Graph                                            |
+| `GET /sitemap.xml`, `GET /robots.txt`        | SEO                                                                   |
 
 ## Roadmap
 

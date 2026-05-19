@@ -1,43 +1,59 @@
 const { test, expect } = require("@playwright/test");
 
-test.describe("Landing page", () => {
-  test("renders hero, search bar and asset categories", async ({ page }, testInfo) => {
+test.describe("Home / landing", () => {
+  test("renders shell + hero + categories", async ({ page }, testInfo) => {
     await page.goto("/");
     await expect(page).toHaveTitle(/Stock Signals/);
-    await expect(page.locator("h1")).toContainText("Sinais técnicos");
-    await expect(page.locator("#search-input")).toBeVisible();
+    await expect(page.locator(".app-header__brand")).toBeVisible();
+    await expect(page.locator(".hero h1")).toContainText(/Sinais|jargão/i);
     await expect(page.getByRole("link", { name: /PETR4/ }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: /BTC-USD/ }).first()).toBeVisible();
-    await expect(page.getByRole("link", { name: /USDBRL/ }).first()).toBeVisible();
 
-    await page.screenshot({
-      path: testInfo.outputPath("home.png"),
-      fullPage: false,
-    });
+    await page.screenshot({ path: testInfo.outputPath("home.png"), fullPage: false });
     await testInfo.attach("home", { path: testInfo.outputPath("home.png"), contentType: "image/png" });
   });
 
-  test("search autocomplete returns suggestions", async ({ page }, testInfo) => {
+  test("bottom tab nav is visible on mobile only", async ({ page, viewport }, testInfo) => {
     await page.goto("/");
-    const input = page.locator("#search-input");
-    await input.fill("petro");
-    await page.waitForResponse((r) => r.url().includes("/api/search"));
-    const results = page.locator("#search-results .search-item");
-    await expect(results.first()).toBeVisible({ timeout: 5_000 });
-    await page.screenshot({ path: testInfo.outputPath("search.png") });
-    await testInfo.attach("search", { path: testInfo.outputPath("search.png"), contentType: "image/png" });
+    const bottomNav = page.locator(".bottom-nav");
+    if (viewport && viewport.width < 900) {
+      await expect(bottomNav).toBeVisible();
+      await page.screenshot({ path: testInfo.outputPath("home-bottom-nav.png"), fullPage: false });
+      await testInfo.attach("home-bottom-nav", { path: testInfo.outputPath("home-bottom-nav.png"), contentType: "image/png" });
+    } else {
+      await expect(bottomNav).not.toBeVisible();
+    }
   });
 
-  test("slash key focuses the search input", async ({ page }) => {
+  test("slash shortcut opens search modal", async ({ page }, testInfo) => {
     await page.goto("/");
     await page.keyboard.press("/");
-    const focused = await page.evaluate(() => document.activeElement?.id);
-    expect(focused).toBe("search-input");
+    const input = page.locator("#globalSearchInput");
+    await expect(input).toBeVisible();
+    await input.fill("petro");
+    await page.waitForResponse((r) => r.url().includes("/api/search"));
+    await expect(page.locator("#globalSearchResults .search-item").first()).toBeVisible({ timeout: 5_000 });
+
+    await page.screenshot({ path: testInfo.outputPath("search-modal.png"), fullPage: false });
+    await testInfo.attach("search-modal", { path: testInfo.outputPath("search-modal.png"), contentType: "image/png" });
   });
 
-  test("favorites section is hidden initially", async ({ page }) => {
+  test("global search button in top bar opens modal", async ({ page }) => {
     await page.goto("/");
-    const section = page.locator("#favorites-category");
-    await expect(section).not.toHaveClass(/has-favorites/);
+    await page.click("#globalSearchBtn");
+    await expect(page.locator("#globalSearchInput")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#searchModal")).toBeHidden();
+  });
+
+  test("theme toggle switches data-theme", async ({ page }, testInfo) => {
+    await page.goto("/");
+    const initial = await page.evaluate(() => document.documentElement.getAttribute("data-theme"));
+    await page.click("#themeToggleBtn");
+    const after = await page.evaluate(() => document.documentElement.getAttribute("data-theme"));
+    expect(after).not.toBe(initial);
+
+    await page.screenshot({ path: testInfo.outputPath("home-dark.png"), fullPage: false });
+    await testInfo.attach("home-dark", { path: testInfo.outputPath("home-dark.png"), contentType: "image/png" });
   });
 });

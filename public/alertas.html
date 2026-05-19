@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>{{page_title}}</title>
+  <meta name="description" content="{{page_description}}">
+  <meta name="robots" content="{{robots}}">
+  <link rel="canonical" href="{{canonical_url}}">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{page_title}}">
+  <meta property="og:description" content="{{page_description}}">
+  <meta property="og:url" content="{{canonical_url}}">
+  <meta property="og:image" content="{{og_image}}">
+  <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <script src="/js/app-shell.js" defer></script>
+</head>
+<body>
+  {{app_shell}}
+
+  <main class="container">
+    <header style="margin-bottom:16px" class="fade-up">
+      <h1>Alertas por e-mail</h1>
+      <p style="color:var(--muted);margin:4px 0 0">Avisamos quando um cruzamento de alta, baixa ou outro sinal técnico for detectado nos seus favoritos.</p>
+    </header>
+
+    <div id="formCard" class="card card--lg fade-up">
+      <form id="alertForm" class="alert-form" novalidate>
+        <label>
+          <div style="font-weight:600;margin-bottom:6px">Seu e-mail</div>
+          <input id="emailInput" class="input" type="email" required placeholder="voce@exemplo.com" autocomplete="email">
+        </label>
+
+        <div>
+          <div style="font-weight:600;margin-bottom:6px">Ativos a monitorar</div>
+          <p style="color:var(--muted);font-size:12px;margin:0 0 8px">Clique para selecionar. Os favoritos do seu navegador aparecem destacados.</p>
+          <div id="tickersPicker" class="tickers-picker"></div>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button type="submit" class="btn btn--primary">Inscrever</button>
+          <span id="formStatus" style="font-size:13px;color:var(--muted)"></span>
+        </div>
+      </form>
+    </div>
+
+    <div id="successCard" class="card card--lg" hidden style="background:var(--accent-up-soft);border-color:var(--accent-up)">
+      <h2 style="margin-top:0;color:var(--accent-up)">✅ Quase lá</h2>
+      <p>Acabamos de enviar um e-mail de confirmação. Clique no link para ativar seu alerta.</p>
+      <p style="font-size:13px;color:var(--muted)">Como esta é a versão educacional, o link de confirmação aparece abaixo:</p>
+      <pre id="confirmLink" style="background:var(--surface);padding:12px;border-radius:8px;font-size:11px;word-break:break-all;overflow-x:auto"></pre>
+    </div>
+
+    <section style="margin-top:24px" class="card card--quiet">
+      <h2 style="margin-top:0">Como funciona</h2>
+      <ol style="padding-left:20px;color:var(--text-2);font-size:14px;margin:0">
+        <li style="margin-bottom:6px">Você se inscreve com e-mail e escolhe os ativos.</li>
+        <li style="margin-bottom:6px">Recebe um e-mail de confirmação.</li>
+        <li style="margin-bottom:6px">Toda noite (após o fechamento do pregão), processamos seus ativos.</li>
+        <li>Se algum sinal técnico for detectado, mandamos um aviso.</li>
+      </ol>
+      <p style="margin:12px 0 0;color:var(--muted);font-size:12px">Você pode cancelar a qualquer momento — todo e-mail traz um link de cancelamento.</p>
+    </section>
+  </main>
+
+  <script>
+    const SUGGESTED = ["PETR4","VALE3","ITUB4","BBAS3","MGLU3","WEGE3","BOVA11","IVVB11","AAPL34","BTC-USD","USDBRL=X"];
+
+    function loadFavoriteTickers() {
+      try {
+        return Object.keys(JSON.parse(localStorage.getItem('stockFavorites') || '{}'));
+      } catch (_) { return []; }
+    }
+
+    function renderPicker() {
+      const picker = document.getElementById('tickersPicker');
+      const favs = loadFavoriteTickers();
+      const all = Array.from(new Set([...favs, ...SUGGESTED]));
+      picker.innerHTML = '';
+      for (const t of all) {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'tickers-picker__chip';
+        chip.dataset.ticker = t;
+        chip.textContent = t;
+        if (favs.includes(t)) chip.classList.add('is-selected');
+        chip.addEventListener('click', () => chip.classList.toggle('is-selected'));
+        picker.appendChild(chip);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderPicker();
+
+      document.getElementById('alertForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('emailInput').value.trim();
+        const tickers = [...document.querySelectorAll('.tickers-picker__chip.is-selected')].map(c => c.dataset.ticker);
+        const status = document.getElementById('formStatus');
+        status.textContent = '';
+        status.style.color = 'var(--muted)';
+
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          status.textContent = '⚠️ E-mail inválido';
+          status.style.color = 'var(--accent-down)';
+          return;
+        }
+        if (tickers.length === 0) {
+          status.textContent = '⚠️ Selecione ao menos um ativo';
+          status.style.color = 'var(--accent-down)';
+          return;
+        }
+
+        status.innerHTML = '<span class="spinner"></span> enviando…';
+        try {
+          const res = await fetch('/api/alerts/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, tickers }),
+          });
+          const body = await res.json();
+          if (!res.ok) throw new Error(body.error || 'Erro');
+          document.getElementById('formCard').hidden = true;
+          document.getElementById('successCard').hidden = false;
+          document.getElementById('confirmLink').textContent = body.confirmUrl;
+          if (window.plausible) window.plausible('alert_subscribe', { props: { count: tickers.length } });
+        } catch (err) {
+          status.textContent = '⚠️ ' + err.message;
+          status.style.color = 'var(--accent-down)';
+        }
+      });
+    });
+  </script>
+</body>
+</html>

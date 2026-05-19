@@ -2,817 +2,172 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>{{page_title}}</title>
   <meta name="description" content="{{page_description}}">
+  <meta name="robots" content="{{robots}}">
   <link rel="canonical" href="{{canonical_url}}">
-  <meta name="robots" content="noindex">
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="{{page_title}}">
-  <meta property="og:description" content="{{page_description}}">
-  <meta property="og:image" content="{{og_image}}">
-  <meta property="og:image:type" content="image/svg+xml">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="apple-touch-icon" href="/favicon.svg">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
   <script src="/chart.umd.js"></script>
-  <script defer data-domain="stock-signals.vercel.app" src="https://plausible.io/js/script.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-      line-height: 1.6;
-    }
-    .back-link {
-      display: inline-block;
-      margin-bottom: 20px;
-      color: #2980b9;
-      text-decoration: none;
-    }
-    .back-link:hover {
-      text-decoration: underline;
-    }
-    .favorites-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-      gap: 60px 20px;
-      margin-top: 20px;
-    }
-
-    @media (max-width: 768px) {
-      .favorites-grid {
-        gap: 60px;
-      }
-    }
-
-    .favorite-card {
-      background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      padding: 20px;
-      transition: transform 0.2s;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-    }
-    .favorite-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    }
-    .favorite-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-    }
-    .favorite-title {
-      font-size: 1.2em;
-      font-weight: bold;
-      color: #2c3e50;
-      margin: 0;
-    }
-    .favorite-header-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .favorite-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 1.2em;
-      padding: 4px;
-      transition: transform 0.2s;
-      color: #f1c40f;
-    }
-    .favorite-btn:hover {
-      transform: scale(1.2);
-    }
-    .favorite-info {
-      margin-bottom: 15px;
-      flex: 1;
-    }
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 8px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #eee;
-    }
-    .info-row:last-child {
-      border-bottom: none;
-    }
-    .info-label {
-      color: #7f8c8d;
-    }
-    .info-value {
-      font-weight: bold;
-    }
-    .signal-entry {
-      color: #2ecc71;
-      font-weight: bold;
-    }
-    .signal-exit {
-      color: #e74c3c;
-      font-weight: bold;
-    }
-    .signal-neutral {
-      color: #7f8c8d;
-      font-weight: bold;
-    }
-    .chart-link {
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 12px;
-      background-color: #2980b9;
-      color: white;
-      text-decoration: none;
-      border-radius: 4px;
-      transition: background-color 0.2s;
-      font-size: 0.9em;
-    }
-    .chart-link:hover {
-      background-color: #2471a3;
-    }
-    .no-favorites {
-      text-align: center;
-      padding: 40px;
-      background-color: #f8f9fa;
-      border-radius: 8px;
-      color: #7f8c8d;
-    }
-    
-    .add-favorite-form {
-      background-color: #f8f9fa;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 20px 0;
-    }
-    
-    .add-favorite-form h3 {
-      margin-top: 0;
-      margin-bottom: 15px;
-      color: #2c3e50;
-    }
-    
-    .add-favorite-form form {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    
-    .add-favorite-form input {
-      flex: 1;
-      min-width: 200px;
-    }
-    
-    .add-favorite-form button:hover {
-      background-color: #2471a3;
-    }
-
-    /* Skeleton Loading Styles */
-    @keyframes shimmer {
-      0% {
-        background-position: -1000px 0;
-      }
-      100% {
-        background-position: 1000px 0;
-      }
-    }
-
-    .skeleton {
-      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-      background-size: 1000px 100%;
-      animation: shimmer 2s infinite linear;
-    }
-
-    .skeleton-card {
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .skeleton-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .skeleton-title {
-      height: 24px;
-      width: 120px;
-      border-radius: 4px;
-      margin-bottom: 15px;
-    }
-
-    .skeleton-row {
-      height: 20px;
-      border-radius: 4px;
-      margin: 0;
-    }
-
-    .skeleton-button {
-      height: 36px;
-      width: 100%;
-      border-radius: 4px;
-      margin-top: auto;
-    }
-
-    /* View Toggle Button */
-    .view-toggle {
-      display: flex;
-      justify-content: flex-end;
-      margin-bottom: 20px;
-      gap: 10px;
-    }
-
-    .view-toggle button {
-      padding: 8px 16px;
-      background-color: #f8f9fa;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .view-toggle button.active {
-      background-color: #2980b9;
-      color: white;
-      border-color: #2980b9;
-    }
-
-    /* List View Styles */
-    .favorites-list {
-      display: none;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .favorites-list .favorite-card {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      padding: 15px;
-      gap: 20px;
-    }
-
-    .favorites-list .favorite-header {
-      width: auto;
-      min-width: 200px;
-    }
-
-    .favorites-list .favorite-header-actions {
-      flex-direction: row;
-    }
-
-    .favorites-list .favorite-info {
-      display: flex;
-      flex: 1;
-      flex-wrap: wrap;
-      gap: 15px;
-      margin-bottom: 0;
-    }
-
-    .favorites-list .info-row {
-      flex: 0 0 auto;
-      margin: 0;
-      padding: 0;
-      border: none;
-      min-width: 150px;
-    }
-
-    .favorites-list .chart-link {
-      width: auto;
-      margin: 0;
-      white-space: nowrap;
-    }
-
-    /* Show active view */
-    .view-grid .favorites-grid {
-      display: grid;
-    }
-
-    .view-grid .favorites-list {
-      display: none;
-    }
-
-    .view-list .favorites-grid {
-      display: none;
-    }
-
-    .view-list .favorites-list {
-      display: flex;
-    }
-
-    @media (max-width: 768px) {
-      .favorites-list .favorite-card {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .favorites-list .favorite-header {
-        width: 100%;
-      }
-
-      .favorites-list .chart-link {
-        font-size: 0.85em;
-        padding: 4px 8px;
-      }
-    }
-
-    /* Chart Section Styles */
-    .chart-section {
-      padding: 20px 0;
-      width: 100%;
-    }
-
-    .chart-container {
-      width: 100%;
-      height: 300px;
-      margin-top: 10px;
-    }
-
-    /* Adjust list view for chart section */
-    .favorites-list .chart-section {
-      margin: 10px 0;
-    }
-
-    .favorites-list .favorite-card {
-      flex-direction: column;
-    }
-
-    .favorites-list .favorite-card .chart-section {
-      margin-top: 20px;
-    }
-  </style>
+  <script src="/js/app-shell.js" defer></script>
 </head>
 <body>
-  <a href="/" class="back-link">← Voltar para a lista de ações</a>
-  <h1>Meus Favoritos</h1>
+  {{app_shell}}
 
-  <div class="add-favorite-form">
-    <h3>Adicionar Novo Ativo</h3>
-    <form onsubmit="addNewFavorite(event)">
-      <input type="text" id="newTickerInput" placeholder="Código do ativo (ex: PETR4)" required pattern="[A-Za-z0-9]{4,6}" style="padding: 8px; margin-right: 8px; border: 1px solid #ddd; border-radius: 4px;">
-      <button type="submit" style="padding: 8px 16px; background-color: #2980b9; color: white; border: none; border-radius: 4px; cursor: pointer;">Adicionar</button>
-    </form>
-  </div>
+  <main class="container">
+    <header style="margin-bottom:16px" class="fade-up">
+      <h1>Meus favoritos</h1>
+      <p style="color:var(--muted);margin:4px 0 0">Sua watchlist salva no navegador. Toque em um ativo para abrir.</p>
+    </header>
 
-  <div class="view-toggle">
-    <button onclick="toggleView('list')" class="active" data-view="list">Lista</button>
-    <button onclick="toggleView('grid')" data-view="grid">Grade</button>
-  </div>
-
-  <div id="favorites-container" class="view-list">
-    <div class="no-favorites">
-      Você ainda não tem nenhum ativo favorito.
-      Navegue pelos ativos e clique na estrela para adicionar aos favoritos.
+    <div id="emptyState" class="card card--quiet" style="text-align:center;padding:32px" hidden>
+      <div style="font-size:32px;margin-bottom:8px">⭐</div>
+      <p style="margin:0">Você ainda não favoritou nenhum ativo. Abra um ativo e toque em "Favoritar".</p>
+      <a href="/" class="btn btn--primary" style="margin-top:16px">Explorar ativos</a>
     </div>
-  </div>
+
+    <div id="favoritesGrid" class="signals-day"></div>
+
+    <section style="margin-top:32px" class="card card--quiet">
+      <h2 style="margin-top:0;font-size:15px">💡 Dica</h2>
+      <p style="margin:0;color:var(--text-2);font-size:13px">Quer receber por e-mail quando um sinal aparecer? <a href="/alertas">Configure alertas grátis</a>.</p>
+    </section>
+  </main>
 
   <script>
-    // Função para adicionar novo favorito
-    async function addNewFavorite(event) {
-      event.preventDefault();
-      const ticker = document.getElementById('newTickerInput').value.toUpperCase();
-      
-      try {
-        // Tenta buscar os dados do ativo para verificar se existe
-        const response = await fetch(`/data/${ticker}?period=1M`);
-        const data = await response.json();
-        
-        if (data.error) {
-          alert('Ativo não encontrado. Verifique o código e tente novamente.');
-          return;
-        }
-        
-        const favorites = JSON.parse(localStorage.getItem('stockFavorites')) || {};
-        favorites[ticker] = ticker;
-        localStorage.setItem('stockFavorites', JSON.stringify(favorites));
-        
-        // Limpa o formulário
-        document.getElementById('newTickerInput').value = '';
-        
-        // Recarrega a lista de favoritos
-        loadFavorites();
-      } catch (error) {
-        alert('Erro ao adicionar ativo. Verifique o código e tente novamente.');
-        console.error('Erro:', error);
-      }
+    const SIGNAL_BADGE = {
+      entry: { text: 'positivo', cls: 'sig-chip--up' },
+      exit: { text: 'negativo', cls: 'sig-chip--down' },
+      neutral: { text: 'neutro', cls: 'sig-chip--neutral' },
+    };
+
+    function loadFavorites() {
+      try { return JSON.parse(localStorage.getItem('stockFavorites') || '{}'); }
+      catch (_) { return {}; }
     }
 
-    // Função para criar um card skeleton
-    function createSkeletonCard() {
-      return `
-        <div class="skeleton-card">
-          <div class="skeleton skeleton-title"></div>
-          <div class="skeleton-content">
-            <div class="skeleton skeleton-row"></div>
-            <div class="skeleton skeleton-row"></div>
-            <div class="skeleton skeleton-row"></div>
-            <div class="skeleton skeleton-row"></div>
-            <div class="skeleton skeleton-row"></div>
-            <div class="skeleton skeleton-row"></div>
-            <div class="skeleton skeleton-row"></div>
-          </div>
-          <div class="skeleton skeleton-button"></div>
-        </div>
-      `;
-    }
-
-    function toggleView(view) {
-      const container = document.getElementById('favorites-container');
-      const buttons = document.querySelectorAll('.view-toggle button');
-      
-      // Update container class
-      container.className = `view-${view}`;
-      
-      // Update button states
-      buttons.forEach(button => {
-        button.classList.toggle('active', button.dataset.view === view);
-      });
-    }
-
-    async function loadFavorites() {
-      const favorites = JSON.parse(localStorage.getItem('stockFavorites')) || {};
-      const container = document.getElementById('favorites-container');
-      
-      if (Object.keys(favorites).length === 0) {
-        container.innerHTML = `
-          <div class="no-favorites">
-            Você ainda não tem nenhum ativo favorito.
-            Navegue pelos ativos e clique na estrela para adicionar aos favoritos.
-          </div>
-        `;
-        return;
-      }
-
-      // Create both grid and list containers
-      container.innerHTML = `
-        <div class="favorites-grid"></div>
-        <div class="favorites-list"></div>
-      `;
-      
-      const grid = container.querySelector('.favorites-grid');
-      const list = container.querySelector('.favorites-list');
-      
-      // Add skeletons for each favorite
-      Object.keys(favorites).forEach(() => {
-        const gridSkeleton = document.createElement('div');
-        gridSkeleton.className = 'favorite-card';
-        gridSkeleton.innerHTML = createSkeletonCard();
-        grid.appendChild(gridSkeleton);
-
-        const listSkeleton = document.createElement('div');
-        listSkeleton.className = 'favorite-card';
-        listSkeleton.innerHTML = createSkeletonCard();
-        list.appendChild(listSkeleton);
-      });
-      
-      // Update cards with real data
-      const updatePromises = Object.keys(favorites).map(async (ticker, index) => {
-        try {
-          const response = await fetch(`/data/${ticker}?period=3M`);
-          const data = await response.json();
-          
-          if (data.error) {
-            console.error(`Erro ao carregar dados para ${ticker}:`, data.error);
-            return;
-          }
-
-          // Pega o último índice dos dados
-          const lastIndex = data.closePrices.length - 1;
-          const analysis = data.analysis[lastIndex];
-          
-          // Calcula as variações
-          const currentPrice = data.closePrices[lastIndex];
-          const previousPrice = data.closePrices[lastIndex - 1];
-          const priceChange = ((currentPrice - previousPrice) / previousPrice) * 100;
-
-          const previousPrice7D = data.closePrices[lastIndex - 7];
-          const priceChange7D = ((currentPrice - previousPrice7D) / previousPrice7D) * 100;
-
-          const previousPrice1M = data.closePrices[lastIndex - 20];
-          const priceChange1M = ((currentPrice - previousPrice1M) / previousPrice1M) * 100;
-          
-          // Create card content
-          const cardContent = `
-            <div class="favorite-header">
-              <h2 class="favorite-title">${ticker}</h2>
-              <div class="favorite-header-actions">
-                <button class="favorite-btn" onclick="removeFavorite('${ticker}')">★</button>
-                <a href="/${ticker}" class="chart-link">Ver Gráfico Detalhado →</a>
-              </div>
-            </div>
-            <div class="favorite-info">
-              <div class="info-row">
-                <span class="info-label">Preço Atual:</span>
-                <span class="info-value">R$ ${currentPrice.toFixed(2)}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">Variação 1D:</span>
-                <span class="info-value ${priceChange >= 0 ? 'signal-entry' : 'signal-exit'}">
-                  ${priceChange >= 0 ? '▲' : '▼'} ${Math.abs(priceChange).toFixed(2)}%
-                </span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">Variação 7D:</span>
-                <span class="info-value ${priceChange7D >= 0 ? 'signal-entry' : 'signal-exit'}">
-                  ${priceChange7D >= 0 ? '▲' : '▼'} ${Math.abs(priceChange7D).toFixed(2)}%
-                </span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">Variação 1M:</span>
-                <span class="info-value ${priceChange1M >= 0 ? 'signal-entry' : 'signal-exit'}">
-                  ${priceChange1M >= 0 ? '▲' : '▼'} ${Math.abs(priceChange1M).toFixed(2)}%
-                </span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">RSI:</span>
-                <span class="info-value">${analysis.rsi.value.toFixed(2)}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">MACD:</span>
-                <span class="info-value">${analysis.macd.value.toFixed(2)}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">Tendência:</span>
-                <span class="info-value signal-${analysis.price.signal}">${analysis.price.message}</span>
-              </div>
-            </div>
-            <div class="chart-section">
-              <div class="chart-container">
-                <canvas id="canvas-${ticker}"></canvas>
-              </div>
-            </div>
-          `;
-
-          // Update both grid and list cards
-          const gridCards = grid.querySelectorAll('.favorite-card');
-          const listCards = list.querySelectorAll('.favorite-card');
-          gridCards[index].innerHTML = cardContent;
-          listCards[index].innerHTML = cardContent;
-
-          // Store the data for later use when creating the chart
-          const chartData = {
-            prices: data.closePrices,
-            dates: data.dates.map(date => {
-              const dateObj = new Date(date);
-              return dateObj.toLocaleDateString();
-            }),
-            rsi: data.rsi,
-            macd: data.macd,
-            signal: data.signal,
-            sma50: data.sma50,
-            sma200: data.sma200,
-            crossPoints: data.crossPoints,
-            macdCrossPoints: data.macdCrossPoints
-          };
-          
-          // Create charts immediately
-          const createChart = (card) => {
-            try {
-              const canvas = card.querySelector(`#canvas-${ticker}`);
-              if (!canvas) {
-                console.error('Canvas element not found');
-                return;
-              }
-
-              const ctx = canvas.getContext('2d');
-              if (!ctx) {
-                console.error('Could not get canvas context');
-                return;
-              }
-
-              const datasets = [
-                {
-                  label: "Preço de Fechamento",
-                  data: data.closePrices,
-                  borderColor: "rgb(255, 82, 82)",
-                  backgroundColor: "rgba(255, 82, 82, 0.1)",
-                  borderWidth: 1,
-                  fill: true,
-                  yAxisID: 'y',
-                  order: 1,
-                  pointRadius: 0,
-                  tension: 0.1
-                },
-                {
-                  label: '50 MA',
-                  data: data.sma50,
-                  borderColor: "green",
-                  borderWidth: 1,
-                  fill: false,
-                  yAxisID: 'y',
-                  order: 2,
-                  pointRadius: 0
-                },
-                {
-                  label: '200 MA',
-                  data: data.sma200,
-                  borderColor: "orange",
-                  borderWidth: 1,
-                  fill: false,
-                  yAxisID: 'y',
-                  order: 3,
-                  pointRadius: 0
-                },
-                {
-                  label: "RSI",
-                  data: data.rsi,
-                  borderColor: "purple",
-                  borderWidth: 1,
-                  fill: false,
-                  yAxisID: 'y1',
-                  order: 4,
-                  pointRadius: 0
-                },
-                {
-                  label: "MACD",
-                  data: data.macd,
-                  borderColor: "red",
-                  borderWidth: 1,
-                  fill: false,
-                  yAxisID: 'y',
-                  order: 5,
-                  pointRadius: 0,
-                  hidden: true
-                }
-              ];
-
-              // Adiciona os pontos de cruzamento
-              datasets.push(
-                {
-                  label: "Death Cross",
-                  data: data.closePrices.map((value, index) => {
-                    const crossPoint = data.crossPoints.find(p => p.type === 'death' && p.date === data.dates[index]);
-                    return crossPoint ? crossPoint.value : null;
-                  }),
-                  backgroundColor: '#FF0000',
-                  borderColor: '#FF0000',
-                  pointStyle: 'star',
-                  pointRadius: 15,
-                  pointHoverRadius: 20,
-                  showLine: false,
-                  yAxisID: 'y',
-                  order: 0
-                },
-                {
-                  label: "Golden Cross",
-                  data: data.closePrices.map((value, index) => {
-                    const crossPoint = data.crossPoints.find(p => p.type === 'golden' && p.date === data.dates[index]);
-                    return crossPoint ? crossPoint.value : null;
-                  }),
-                  backgroundColor: '#FFD700',
-                  borderColor: '#FFD700',
-                  pointStyle: 'star',
-                  pointRadius: 15,
-                  pointHoverRadius: 20,
-                  showLine: false,
-                  yAxisID: 'y',
-                  order: 0
-                },
-                {
-                  label: "MACD Cruzamento Alta",
-                  data: data.closePrices.map((value, index) => {
-                    const macdPoint = data.macdCrossPoints.find(p => p.type === 'up' && p.date === data.dates[index]);
-                    return macdPoint ? macdPoint.value : null;
-                  }),
-                  backgroundColor: '#2ecc71',
-                  borderColor: '#2ecc71',
-                  pointStyle: 'triangle',
-                  pointRadius: 12,
-                  pointHoverRadius: 15,
-                  rotation: 0,
-                  showLine: false,
-                  yAxisID: 'y',
-                  order: 0
-                },
-                {
-                  label: "MACD Cruzamento Baixa",
-                  data: data.closePrices.map((value, index) => {
-                    const macdPoint = data.macdCrossPoints.find(p => p.type === 'down' && p.date === data.dates[index]);
-                    return macdPoint ? macdPoint.value : null;
-                  }),
-                  backgroundColor: '#e74c3c',
-                  borderColor: '#e74c3c',
-                  pointStyle: 'triangle',
-                  pointRadius: 12,
-                  pointHoverRadius: 15,
-                  rotation: 180,
-                  showLine: false,
-                  yAxisID: 'y',
-                  order: 0
-                }
-              );
-
-              new Chart(ctx, {
-                type: 'line',
-                data: { 
-                  labels: chartData.dates,
-                  datasets
-                },
-                options: {
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  interaction: {
-                    mode: 'index',
-                    intersect: false,
-                  },
-                  scales: {
-                    x: { 
-                      title: { display: true, text: "Data" }
-                    },
-                    y: { 
-                      type: 'linear',
-                      display: true,
-                      position: 'left',
-                      title: { display: true, text: "Preço" }
-                    },
-                    y1: {
-                      type: 'linear',
-                      display: true,
-                      position: 'right',
-                      min: 0,
-                      max: 100,
-                      grid: {
-                        drawOnChartArea: false,
-                      },
-                      title: { 
-                        display: true, 
-                        text: "RSI" 
-                      },
-                      ticks: {
-                        callback: function(value) {
-                          return value + '%';
-                        }
-                      }
-                    }
-                  },
-                  plugins: {
-                    tooltip: {
-                      callbacks: {
-                        label: function(context) {
-                          const label = context.dataset.label || '';
-                          const value = context.parsed.y;
-                          
-                          if (label === "Golden Cross") {
-                            return "Golden Cross: Sinal de COMPRA - MA50 cruzou acima da MA200";
-                          }
-                          if (label === "Death Cross") {
-                            return "Death Cross: Sinal de VENDA - MA50 cruzou abaixo da MA200";
-                          }
-                          if (label === "MACD Cruzamento Alta") {
-                            return "MACD: Sinal de COMPRA - Cruzou linha zero de baixo para cima";
-                          }
-                          if (label === "MACD Cruzamento Baixa") {
-                            return "MACD: Sinal de VENDA - Cruzou linha zero de cima para baixo";
-                          }
-                          if (label === "RSI") {
-                            return `${label}: ${value.toFixed(2)} (Sobrecompra > 70, Sobrevenda < 30)`;
-                          }
-                          return `${label}: ${value.toFixed(2)}`;
-                        }
-                      }
-                    }
-                  }
-                }
-              });
-            } catch (error) {
-              console.error('Erro ao criar gráfico:', error);
-              console.error('Error details:', {
-                canvasExists: !!card.querySelector(`#canvas-${ticker}`),
-                chartData: chartData
-              });
-            }
-          };
-
-          // Create charts for both grid and list views
-          createChart(gridCards[index]);
-          createChart(listCards[index]);
-
-        } catch (error) {
-          console.error(`Erro ao carregar dados para ${ticker}:`, error);
-        }
-      });
-
-      await Promise.all(updatePromises);
-    }
+    function saveFavorites(f) { localStorage.setItem('stockFavorites', JSON.stringify(f)); }
 
     function removeFavorite(ticker) {
-      const favorites = JSON.parse(localStorage.getItem('stockFavorites')) || {};
-      delete favorites[ticker];
-      localStorage.setItem('stockFavorites', JSON.stringify(favorites));
-      loadFavorites();
+      const f = loadFavorites();
+      delete f[ticker];
+      saveFavorites(f);
+      render();
     }
 
-    // Carrega os favoritos ao iniciar a página
-    document.addEventListener('DOMContentLoaded', loadFavorites);
+    async function loadCardData(ticker) {
+      try {
+        const res = await fetch('/data/' + encodeURIComponent(ticker) + '?period=3M');
+        if (!res.ok) return null;
+        return await res.json();
+      } catch (_) { return null; }
+    }
+
+    function lastSignals(data) {
+      if (!data || !data.analysis || data.analysis.length === 0) return null;
+      const a = data.analysis[data.analysis.length - 1];
+      return a;
+    }
+
+    function lastPrice(data) {
+      if (!data || !data.closePrices) return null;
+      return data.closePrices[data.closePrices.length - 1];
+    }
+
+    function priceChange(data) {
+      if (!data || !data.closePrices || data.closePrices.length < 2) return null;
+      const last = data.closePrices[data.closePrices.length - 1];
+      const prev = data.closePrices[data.closePrices.length - 2];
+      if (last == null || prev == null || prev === 0) return null;
+      return (last - prev) / prev;
+    }
+
+    async function buildCard(ticker, name) {
+      const card = document.createElement('div');
+      card.className = 'signal-card fade-up';
+      card.innerHTML = `
+        <div class="signal-card__header" style="justify-content:space-between">
+          <a href="/${encodeURIComponent(ticker)}" style="text-decoration:none;color:inherit">
+            <strong>${ticker}</strong>
+            <small style="color:var(--muted);font-weight:400">${name || ''}</small>
+          </a>
+          <button class="btn btn--ghost btn--sm" data-remove="${ticker}" aria-label="Remover">✕</button>
+        </div>
+        <div class="signal-card__sub" data-status>Carregando…</div>
+        <div data-mini-chart style="height:80px;margin-top:8px"></div>
+        <div data-signals style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px"></div>
+      `;
+      card.querySelector('[data-remove]').addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        removeFavorite(ticker);
+      });
+      const data = await loadCardData(ticker);
+      const statusEl = card.querySelector('[data-status]');
+      const a = lastSignals(data);
+      if (!data || !a) {
+        statusEl.textContent = 'Sem dados ainda';
+        return card;
+      }
+      const price = lastPrice(data);
+      const change = priceChange(data);
+      const cur = data.ticker && data.ticker.endsWith('.SA') ? 'R$ ' : '';
+      const changeStr = change == null ? '' : ` <span style="color:${change >= 0 ? 'var(--accent-up)' : 'var(--accent-down)'};font-weight:600">${change >= 0 ? '+' : ''}${(change * 100).toFixed(2)}%</span>`;
+      statusEl.innerHTML = `<strong>${cur}${price == null ? '—' : price.toFixed(2)}</strong>${changeStr}`;
+
+      const sigs = card.querySelector('[data-signals]');
+      [{ s: a.price.signal, label: 'preço' }, { s: a.rsi.signal, label: 'RSI' }, { s: a.macd.signal, label: 'MACD' }, { s: a.cross.signal, label: 'tend.' }].forEach(({ s, label }) => {
+        const b = SIGNAL_BADGE[s] || SIGNAL_BADGE.neutral;
+        const chip = document.createElement('span');
+        chip.className = 'sig-chip ' + b.cls;
+        chip.textContent = label + ': ' + b.text;
+        sigs.appendChild(chip);
+      });
+
+      // Mini-sparkline
+      const chartEl = card.querySelector('[data-mini-chart]');
+      const canvas = document.createElement('canvas');
+      chartEl.appendChild(canvas);
+      const labels = data.dates.map(d => new Date(d).toLocaleDateString('pt-BR'));
+      new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{ data: data.closePrices, borderColor: change >= 0 ? '#10b981' : '#ef4444', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.1 }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: false } },
+          scales: { x: { display: false }, y: { display: false } },
+          elements: { point: { radius: 0 } },
+        },
+      });
+
+      return card;
+    }
+
+    async function render() {
+      const favs = loadFavorites();
+      const grid = document.getElementById('favoritesGrid');
+      const empty = document.getElementById('emptyState');
+      grid.innerHTML = '';
+      const entries = Object.entries(favs);
+      if (entries.length === 0) {
+        empty.hidden = false;
+        return;
+      }
+      empty.hidden = true;
+      for (const [ticker, name] of entries) {
+        const card = await buildCard(ticker, name);
+        grid.appendChild(card);
+      }
+    }
+
+    render();
   </script>
 </body>
-</html> 
+</html>
