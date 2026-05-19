@@ -1,2 +1,13 @@
 node_modules
 TODO.md
+.env
+.env.local
+.vercel
+*.log
+.DS_Store
+coverage
+playwright-report
+test-results
+_comment_screenshots
+/pw-browsers
+public/chart.umd.js

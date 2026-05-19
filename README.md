@@ -1,117 +1,127 @@
 # Stock Signals 📈
 
-Uma aplicação web para análise técnica de ações, fornecendo sinais de compra e venda baseados em indicadores técnicos.
+Análise técnica gratuita para ações da B3, BDRs, ETFs, criptomoedas e câmbio. Sinais automáticos (Golden/Death Cross, MACD, RSI) e framework educacional embutido.
 
-## Funcionalidades 🚀
+> Demo: deploy via Vercel — abra `/PETR4`, `/AAPL`, `/BTC-USD`, `/USDBRL=X`, etc.
 
-- **Visualização de Preços**: Gráfico interativo com preços de fechamento
-- **Médias Móveis**: 
-  - MA50 (Média Móvel de 50 períodos)
-  - MA200 (Média Móvel de 200 períodos)
-  - Identificação automática de Golden Cross e Death Cross
-- **Indicadores Técnicos**:
-  - RSI (Índice de Força Relativa)
-  - MACD (Convergência/Divergência de Médias Móveis)
-- **Sinais Automáticos**:
-  - Golden Cross (MA50 cruza acima da MA200)
-  - Death Cross (MA50 cruza abaixo da MA200)
-  - Cruzamentos do MACD com zero
-  - Níveis de Sobrecompra/Sobrevenda do RSI
-- **Análise em Tempo Real**:
-  - Box de análise com interpretação dos indicadores
-  - Atualização dinâmica ao clicar em qualquer ponto do gráfico
-- **Períodos Flexíveis**:
-  - 1 Mês
-  - 3 Meses
-  - 6 Meses
-  - 1 Ano
-  - 5 Anos
-  - Histórico Completo
+## Funcionalidades
 
-## Framework de Análise 📊
+- **Visualização de preço** com Chart.js e médias móveis MA50 e MA200.
+- **Indicadores técnicos** clássicos: RSI(14) e MACD (linha, linha de sinal e histograma).
+- **Sinais automáticos** marcados no gráfico:
+  - ⭐ Golden Cross (MA50 cruza acima da MA200) e Death Cross
+  - 🔺 MACD bullish/bearish cross (linha do MACD cruza a linha de sinal)
+- **Análise diária** com interpretação por indicador — clique em qualquer ponto do gráfico para ver a análise daquele pregão.
+- **Cobertura ampla**: ações da B3, BDRs, ações americanas, ETFs, criptomoedas (`BTC-USD`), câmbio (`USDBRL=X`) e índices (`^BVSP`).
+- **Busca por nome** com autocomplete (atalho `/` para focar).
+- **Favoritos** persistidos no navegador (LocalStorage).
+- **Compartilhamento** com Open Graph dinâmico por ativo.
+- **PWA leve** — adicione à tela inicial.
 
-A aplicação utiliza um framework simplificado para identificar pontos de entrada e saída:
+## Stack
 
-1. **Análise de Tendência**:
-   - Preço em relação às médias móveis
-   - Identificação de Golden Cross e Death Cross
+- **Backend**: Node.js 18+, Express, [yahoo-finance2](https://github.com/gadicc/node-yahoo-finance2), [technicalindicators](https://github.com/anandanand84/technicalindicators), [express-rate-limit](https://github.com/express-rate-limit/express-rate-limit).
+- **Frontend**: HTML estático + Chart.js 4.
+- **Testes**: [Vitest](https://vitest.dev/).
+- **Deploy**: Vercel.
 
-2. **Força do Movimento**:
-   - RSI para identificar sobrecompra/sobrevenda
-   - MACD para confirmar momentum
+## Rodando localmente
 
-3. **Sinais Combinados**:
-   - Integração de múltiplos indicadores
-   - Redução de falsos sinais
-
-## Instalação 🛠️
-
-1. Clone o repositório:
 ```bash
-git clone https://github.com/seu-usuario/stock-signals.git
+git clone https://github.com/chicomcastro/stock-signals.git
 cd stock-signals
-```
-
-2. Instale as dependências:
-```bash
 npm install
-```
-
-3. Inicie o servidor de desenvolvimento:
-```bash
 npm run dev
 ```
 
-4. Acesse a aplicação em:
+Acesse [http://localhost:3000](http://localhost:3000).
+
+## Scripts
+
+| Script                    | Descrição                                            |
+| ------------------------- | ---------------------------------------------------- |
+| `npm start`               | Sobe o servidor de produção                          |
+| `npm run dev`             | Servidor com auto-reload                             |
+| `npm test`                | Executa testes unitários + integração (Vitest)       |
+| `npm run test:watch`      | Testes em modo watch                                 |
+| `npm run test:coverage`   | Cobertura via v8 (threshold ≥90%)                    |
+| `npm run test:e2e`        | E2E com Playwright (desktop + mobile) + screenshots  |
+| `npm run test:e2e:install`| Baixa o Chromium para Playwright                     |
+| `npm run test:all`        | Roda cobertura + e2e                                 |
+| `npm run fixture:generate`| Regenera a fixture sintética usada em testes         |
+
+### Estratégia de testes
+
+- **Unit** (`src/*.test.mjs`): funções puras — indicadores, ticker, cache, OG.
+- **Integração** (`test/integration/*.test.mjs`): server + dataProvider via Supertest. Cobre rotas, hardening, contratos JSON, modo `MOCK_YAHOO=1` (fixture).
+- **E2E** (`test/e2e/*.spec.js`): Playwright contra o servidor em `MOCK_YAHOO=1`. Smoke das jornadas principais + screenshots desktop e mobile.
+
+Para os testes E2E não dependerem de rede externa, o servidor pode ser executado com `MOCK_YAHOO=1`, que usa a fixture determinística em `test/fixtures/historical.json`.
+
+### CI
+
+O workflow `.github/workflows/ci.yml` roda em cada PR e push para `main`:
+
+1. **Job `unit`**: instala dependências, roda `vitest --coverage`, faz upload do `coverage/` como artifact e posta um comentário com a tabela de cobertura no PR.
+2. **Job `e2e`**: instala browsers do Playwright, roda os specs com `MOCK_YAHOO=1`, faz upload do `playwright-report/`, sobe screenshots para a branch `ci-previews/pr-<N>/<sha>/` e posta um comentário com as imagens inline.
+
+## Variáveis de ambiente
+
+| Variável            | Default | Descrição                                              |
+| ------------------- | ------- | ------------------------------------------------------ |
+| `PORT`              | `3000`  | Porta do servidor local.                               |
+| `PUBLIC_BASE_URL`   | inferido | URL pública usada para canonical, OG e sitemap.       |
+
+## Como funciona o framework
+
+1. **Tendência** — preço vs MA200 + cruzamentos MA50/MA200.
+2. **Força relativa** — RSI(14) em zonas de sobrecompra (>70) ou sobrevenda (<30).
+3. **Momentum** — MACD line cruzando a linha de sinal (não a linha zero).
+4. **Combinação** — sinais alinhados reduzem falsos positivos.
+
+Veja o framework completo na página inicial.
+
+## Arquitetura
+
 ```
-http://localhost:3000
+src/
+├── index.js          Entrypoint Express (boot local + handler Vercel)
+├── server.js         Configuração da app: rotas, middlewares, hardening
+├── dataProvider.js   Yahoo Finance + cache + montagem do payload
+├── indicators.js     SMA, RSI, MACD, detecção de cruzamentos, análises puras
+├── cache.js          Cache em memória com TTL dependente do horário do pregão
+├── ticker.js         Normalização de tickers (B3, US, cripto, FX, índices)
+├── og.js             Imagem SVG dinâmica para Open Graph
+└── *.test.mjs        Testes unitários
+public/
+├── index.html        Landing + busca + categorias + framework
+├── chart.html        Página do ativo (template, var {{ticker}})
+├── favorites.html    Watchlist em LocalStorage
+├── css/base.css      Tokens + utilitários
+└── favicon.svg, manifest.webmanifest
 ```
 
-## Uso 💡
+## Endpoints
 
-1. Na página inicial, você encontrará exemplos de tickers para analisar
-2. Clique em um ticker ou digite um novo na URL (ex: /PETR4)
-3. Use os botões de período para ajustar o intervalo de tempo
-4. Clique em qualquer ponto do gráfico para ver a análise daquele dia
-5. Observe os sinais automáticos marcados no gráfico:
-   - ⭐ Golden Cross (amarelo)
-   - ⭐ Death Cross (vermelho)
-   - 🔺 MACD Cruzamento Alta (verde)
-   - 🔻 MACD Cruzamento Baixa (vermelho)
+| Endpoint                  | Descrição                                              |
+| ------------------------- | ------------------------------------------------------ |
+| `GET /`                   | Landing                                                |
+| `GET /:ticker`            | Página de análise (ex.: `/PETR4`, `/AAPL`, `/BTC-USD`) |
+| `GET /data/:ticker`       | JSON com preços, indicadores e análise                 |
+| `GET /api/search?q=`      | Busca por nome/símbolo                                 |
+| `GET /api/quote/:ticker`  | Cotação resumida                                       |
+| `GET /og/:ticker.svg`     | Imagem SVG para Open Graph                             |
+| `GET /sitemap.xml`        | Sitemap                                                |
+| `GET /robots.txt`         | Robots                                                 |
 
-## Tecnologias Utilizadas 🔧
+## Roadmap
 
-- **Backend**:
-  - Node.js
-  - Express
-  - Yahoo Finance API
-
-- **Frontend**:
-  - HTML5
-  - CSS3
-  - JavaScript
-  - Chart.js
-
-## Desenvolvimento 👨‍💻
-
-Para desenvolvimento, o projeto usa nodemon para auto-reload:
-
-```bash
-npm run dev
-```
-
-## Contribuindo 🤝
-
-1. Faça um Fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
-## Licença 📝
-
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+Veja [`docs/ANALISE_E_BACKLOG.md`](docs/ANALISE_E_BACKLOG.md) — diagnóstico e backlog priorizado de produto, engenharia e marketing.
 
 ## Disclaimer ⚠️
 
-Esta aplicação é apenas para fins educacionais e não constitui recomendação de investimento. Sempre faça sua própria análise e consulte um profissional financeiro antes de investir. 
+Esta aplicação é apenas para fins educacionais e **não constitui recomendação de investimento**. Sempre faça sua própria análise e consulte um profissional financeiro antes de investir.
+
+## Licença
+
+[MIT](LICENSE)
