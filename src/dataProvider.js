@@ -5,6 +5,7 @@ const fs = require("fs");
 const { createCache, ttlForNow } = require("./cache");
 const { computeIndicators, findMaCrossPoints, findMacdSignalCrossPoints, analyzeIndicators } = require("./indicators");
 const brapi = require("./providers/brapi");
+const persistent = require("./persistentStore");
 
 if (typeof yahooFinance.suppressNotices === "function") {
   yahooFinance.suppressNotices(["yahooSurvey", "ripHistorical"]);
@@ -176,12 +177,19 @@ async function fetchChart(ticker, period) {
       return await retry(() => fetchBrapiChartRaw(ticker, period));
     } catch (err) {
       const classified = classifyError(err);
-      // For 401/403 (bad token) or transient failures, fall back to Yahoo silently
-      if (classified.status === 401 || classified.status === 403 || classified.status === 502) {
+      // Brapi failed → try Yahoo (different IP/quota, may work even when Brapi rate-limits)
+      if ([401, 403, 429, 500, 502, 503].includes(classified.status)) {
         try {
           return await retry(() => fetchYahooChartRaw(ticker, period));
         } catch (yErr) {
-          throw classifyError(yErr);
+          // Both providers failed. Surface a unified friendly message so the
+          // user sees the same error for "rate limit" and "anon quota exhausted".
+          const friendly = new Error(
+            "Os provedores de dados estão sob carga no momento. Tente novamente em 1-2 minutos."
+          );
+          friendly.status = 429;
+          friendly.retryable = true;
+          throw friendly;
         }
       }
       throw classified;
@@ -203,7 +211,19 @@ async function getHistoricalAnalysis(normalizedTicker, period) {
     throw cachedErr;
   }
 
-  return dedup(cacheKey, () => loadHistoricalAnalysis(normalizedTicker, period, cacheKey, errKey));
+  return dedup(cacheKey, async () => {
+    // L2: persistent cache (Upstash). Only used if env vars are set.
+    if (persistent.isEnabled()) {
+      try {
+        const remote = await persistent.get(cacheKey);
+        if (remote) {
+          historicalCache.set(cacheKey, remote, ttlForNow());
+          return { ...remote, cache: "persistent" };
+        }
+      } catch (_) {}
+    }
+    return loadHistoricalAnalysis(normalizedTicker, period, cacheKey, errKey);
+  });
 }
 
 async function loadHistoricalAnalysis(normalizedTicker, period, cacheKey, errKey) {
@@ -277,7 +297,14 @@ function buildAnalysisFromRaw(normalizedTicker, period, raw, cacheKey) {
   };
   responseData.analysis = dates.map((_, i) => analyzeIndicators(responseData, i));
 
-  if (cacheKey) historicalCache.set(cacheKey, responseData, ttlForNow());
+  if (cacheKey) {
+    historicalCache.set(cacheKey, responseData, ttlForNow());
+    // Fire-and-forget persistent write — never blocks the response.
+    if (persistent.isEnabled()) {
+      const ttlSeconds = Math.floor(ttlForNow() / 1000);
+      persistent.set(cacheKey, responseData, ttlSeconds).catch(() => {});
+    }
+  }
   return cacheKey ? { ...responseData, cache: "miss" } : responseData;
 }
 

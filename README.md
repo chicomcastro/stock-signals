@@ -68,16 +68,27 @@ O workflow `.github/workflows/ci.yml` roda em cada PR e push para `main`:
 
 ## Variáveis de ambiente
 
-| Variável            | Default                   | Descrição                                                                                 |
-| ------------------- | ------------------------- | ----------------------------------------------------------------------------------------- |
-| `PORT`              | `3000`                    | Porta do servidor local.                                                                  |
-| `PUBLIC_BASE_URL`   | inferido                  | URL pública usada para canonical, OG e sitemap.                                           |
-| `BRAPI_TOKEN`       | (opcional)                | Token gratuito do [brapi.dev](https://brapi.dev/dashboard). Aumenta quota para B3.        |
-| `BRAPI_BASE`        | `https://brapi.dev/api`   | URL base do Brapi (sobreescrita útil em testes).                                          |
-| `PREFER_BRAPI`      | `1`                       | `0` desativa o Brapi como provider primário para B3 (volta a usar só Yahoo).              |
-| `MOCK_YAHOO`        | (vazio)                   | `1` usa fixture determinística — sem chamadas externas. Para CI/E2E.                      |
-| `SIGNALS_CONCURRENCY` | `3`                     | Paralelismo do fallback non-batch para `/api/signals`.                                    |
-| `RATE_LIMIT_MAX`    | `60` (prod) / `10000` (test) | Limite por IP/minuto nas rotas de API.                                                |
+| Variável                       | Default                  | Descrição                                                                  |
+| ------------------------------ | ------------------------ | -------------------------------------------------------------------------- |
+| `PORT`                         | `3000`                   | Porta do servidor local.                                                   |
+| `PUBLIC_BASE_URL`              | inferido                 | URL pública usada para canonical, OG e sitemap.                            |
+| `BRAPI_TOKEN`                  | (opcional, recomendado)  | Token gratuito do [brapi.dev/dashboard](https://brapi.dev/dashboard). Sem ele, a quota anônima é compartilhada pelo IP da Vercel e acaba rápido. Com ele, free tier dá ~15k req/mês — suficiente. |
+| `BRAPI_BASE`                   | `https://brapi.dev/api`  | URL base do Brapi (sobreescrita útil em testes).                           |
+| `PREFER_BRAPI`                 | `1`                      | `0` desativa o Brapi como provider primário para B3.                       |
+| `UPSTASH_REDIS_REST_URL`       | (opcional)               | URL REST do Upstash Redis para **cache persistente entre cold starts**. Sem isso, cada novo lambda perde o cache em memória. Free tier 10k req/dia. |
+| `UPSTASH_REDIS_REST_TOKEN`     | (opcional)               | Token correspondente.                                                      |
+| `MOCK_YAHOO`                   | (vazio)                  | `1` usa fixture determinística — sem chamadas externas. Para CI/E2E.       |
+| `SIGNALS_CONCURRENCY`          | `3`                      | Paralelismo do fallback non-batch para `/api/signals`.                     |
+| `RATE_LIMIT_MAX`               | `60` / `10000` (test)    | Limite por IP/minuto nas rotas de API.                                     |
+
+### Setup recomendado para produção (Vercel)
+
+Para eliminar o "Limite de requisições" em produção:
+
+1. **Brapi token** (1 min, grátis): registre em [brapi.dev/dashboard](https://brapi.dev/dashboard) → copie o token → adicione como env var `BRAPI_TOKEN` no Vercel.
+2. **Upstash Redis** (2 min, grátis): crie um banco em [upstash.com](https://upstash.com) → copie `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN` → adicione no Vercel.
+
+Com os 2 configurados, mesmo em cold start o app serve dados do cache persistente — a cota do Brapi/Yahoo é tocada no máximo 1x por ticker por dia.
 
 ## Como funciona o framework
 

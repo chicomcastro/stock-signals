@@ -246,13 +246,27 @@ describe("Brapi path", () => {
     dp.setBrapiClient({});
   });
 
-  it("propagates Brapi 429 without Yahoo fallback", async () => {
+  it("falls back to Yahoo when Brapi returns 429", async () => {
     const brapiStub = makeBrapiStub();
     brapiStub.chart.mockRejectedValue(Object.assign(new Error("rate"), { status: 429, retryable: true }));
+    stub.chart.mockResolvedValue(makeChartReturn(50));
     dp.setBrapiClient(brapiStub);
 
-    await expect(dp.getHistoricalAnalysis("PETR4.SA", "3M")).rejects.toMatchObject({ status: 429 });
-    expect(stub.chart).not.toHaveBeenCalled();
+    const data = await dp.getHistoricalAnalysis("PETR4.SA", "3M");
+    expect(brapiStub.chart).toHaveBeenCalled();
+    expect(stub.chart).toHaveBeenCalled();
+    expect(data.dates.length).toBeGreaterThan(0);
+
+    dp.setBrapiClient({});
+  });
+
+  it("throws original Brapi error when Yahoo also fails after Brapi 429", async () => {
+    const brapiStub = makeBrapiStub();
+    brapiStub.chart.mockRejectedValue(Object.assign(new Error("brapi rate"), { status: 429, retryable: true }));
+    stub.chart.mockRejectedValue(new Error("Too Many Requests"));
+    dp.setBrapiClient(brapiStub);
+
+    await expect(dp.getHistoricalAnalysis("BBDC4.SA", "3M")).rejects.toMatchObject({ status: 429 });
 
     dp.setBrapiClient({});
   });
@@ -336,6 +350,13 @@ describe("getHistoricalAnalysisBatch", () => {
     dp.setBrapiClient({});
   });
 });
+
+// Note: Persistent cache integration testing requires the same module instance
+// loaded by both the test and dataProvider.js. Because Vitest uses ESM `import`
+// for `.mjs` test files while dataProvider.js uses CJS `require`, they get
+// different module instances. The persistent store is unit-tested in
+// persistentStore.test.mjs against its public API; its wiring into
+// dataProvider.js is exercised on real network calls in production.
 
 describe("getQuote with stale-on-error", () => {
   it("returns stale cache when Yahoo errors", async () => {
