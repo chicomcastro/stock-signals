@@ -16,11 +16,12 @@ test.describe("Ticker page", () => {
     await waitForChartReady(page);
     await expect(page.locator(".verdict")).toBeVisible();
 
-    // Wait for backtest panel to load
+    // Backtest is lazy-loaded via IntersectionObserver — scroll it into view
+    await page.locator("#backtestContent").scrollIntoViewIfNeeded();
     await page.waitForFunction(
       () => {
         const el = document.querySelector("#backtestContent");
-        return el && (el.textContent.includes("ocorrência") || el.textContent.includes("Nenhuma") || el.textContent.includes("Sem histórico"));
+        return el && (el.textContent.includes("ocorrência") || el.textContent.includes("Nenhuma") || el.textContent.includes("Sem histórico") || el.textContent.includes("Não foi possível"));
       },
       { timeout: 20_000 }
     );

@@ -4,11 +4,19 @@ function createCache({ ttlMs } = { ttlMs: 5 * 60 * 1000 }) {
   function get(key) {
     const entry = store.get(key);
     if (!entry) return null;
-    if (Date.now() > entry.expiresAt) {
-      store.delete(key);
-      return null;
-    }
+    if (Date.now() > entry.expiresAt) return null;
     return entry.value;
+  }
+
+  function getStale(key) {
+    const entry = store.get(key);
+    return entry ? entry.value : null;
+  }
+
+  function getEntry(key) {
+    const entry = store.get(key);
+    if (!entry) return null;
+    return { value: entry.value, expired: Date.now() > entry.expiresAt, expiresAt: entry.expiresAt };
   }
 
   function set(key, value, customTtl) {
@@ -24,7 +32,7 @@ function createCache({ ttlMs } = { ttlMs: 5 * 60 * 1000 }) {
     store.clear();
   }
 
-  return { get, set, size, clear };
+  return { get, getStale, getEntry, set, size, clear };
 }
 
 function isMarketHoursBRT(now = new Date()) {
@@ -36,7 +44,7 @@ function isMarketHoursBRT(now = new Date()) {
 }
 
 function ttlForNow(now = new Date()) {
-  return isMarketHoursBRT(now) ? 5 * 60 * 1000 : 6 * 60 * 60 * 1000;
+  return isMarketHoursBRT(now) ? 15 * 60 * 1000 : 24 * 60 * 60 * 1000;
 }
 
 module.exports = { createCache, isMarketHoursBRT, ttlForNow };

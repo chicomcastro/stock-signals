@@ -36,6 +36,30 @@ describe("createCache", () => {
     c.clear();
     expect(c.size()).toBe(0);
   });
+
+  it("getStale returns value even after expiration", async () => {
+    const c = createCache({ ttlMs: 10 });
+    c.set("k", "v");
+    await new Promise((r) => setTimeout(r, 30));
+    expect(c.get("k")).toBeNull();
+    expect(c.getStale("k")).toBe("v");
+  });
+
+  it("getStale returns null for missing key", () => {
+    const c = createCache();
+    expect(c.getStale("nope")).toBeNull();
+  });
+
+  it("getEntry includes expired flag", async () => {
+    const c = createCache({ ttlMs: 10 });
+    c.set("k", "v");
+    const fresh = c.getEntry("k");
+    expect(fresh.expired).toBe(false);
+    await new Promise((r) => setTimeout(r, 30));
+    const expired = c.getEntry("k");
+    expect(expired.expired).toBe(true);
+    expect(c.getEntry("none")).toBeNull();
+  });
 });
 
 describe("isMarketHoursBRT", () => {
@@ -65,11 +89,11 @@ describe("isMarketHoursBRT", () => {
 describe("ttlForNow", () => {
   it("returns short TTL during pregão", () => {
     const tueAfternoon = new Date("2026-05-19T17:00:00.000Z");
-    expect(ttlForNow(tueAfternoon)).toBe(5 * 60 * 1000);
+    expect(ttlForNow(tueAfternoon)).toBe(15 * 60 * 1000);
   });
 
   it("returns long TTL outside pregão", () => {
     const sat = new Date("2026-05-16T15:00:00.000Z");
-    expect(ttlForNow(sat)).toBe(6 * 60 * 60 * 1000);
+    expect(ttlForNow(sat)).toBe(24 * 60 * 60 * 1000);
   });
 });

@@ -279,27 +279,43 @@
     // Set initial active chip
     document.querySelectorAll('.chip[data-period]').forEach(b => b.classList.toggle('is-active', b.dataset.period === initialPeriod));
 
-    // ===== Live quote =====
-    async function loadQuote() {
-      try {
-        const res = await fetch('/api/quote/' + encodeURIComponent(tickerDisplay));
-        if (!res.ok) return;
-        const q = await res.json();
-        const wrap = document.getElementById('livePrice');
-        const value = document.getElementById('livePriceValue');
-        const change = document.getElementById('livePriceChange');
-        if (q.regularMarketPrice != null) {
-          const cur = q.currency === 'BRL' ? 'R$ ' : (q.currency ? q.currency + ' ' : '');
-          value.textContent = cur + fmt(q.regularMarketPrice);
-          if (q.regularMarketChangePercent != null) {
-            const ch = Number(q.regularMarketChangePercent);
-            change.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
-            change.classList.toggle('is-up', ch >= 0);
-            change.classList.toggle('is-down', ch < 0);
-          }
-          wrap.hidden = false;
+    // ===== Live quote (derived from /data response) =====
+    function renderQuoteFromData(data) {
+      const meta = data && data.meta;
+      const wrap = document.getElementById('livePrice');
+      const value = document.getElementById('livePriceValue');
+      const change = document.getElementById('livePriceChange');
+      const nameEl = document.getElementById('assetName');
+
+      // Asset name from meta or fallback
+      if (meta && meta.shortName && meta.shortName !== tickerDisplay && !nameEl.textContent.trim()) {
+        nameEl.textContent = ' — ' + meta.shortName;
+      }
+
+      // Price: prefer meta, fall back to last close
+      let price = meta && meta.regularMarketPrice;
+      if (price == null && data && data.closePrices) {
+        price = data.closePrices[data.closePrices.length - 1];
+      }
+      // Change %: prefer meta, fall back to (last-prev)/prev
+      let ch = meta && meta.regularMarketChangePercent;
+      if (ch == null && data && data.closePrices && data.closePrices.length >= 2) {
+        const last = data.closePrices[data.closePrices.length - 1];
+        const prev = data.closePrices[data.closePrices.length - 2];
+        if (last != null && prev != null && prev !== 0) ch = ((last - prev) / prev) * 100;
+      }
+      const currency = (meta && meta.currency) || (data && data.ticker && data.ticker.endsWith('.SA') ? 'BRL' : null);
+
+      if (price != null && !Number.isNaN(price)) {
+        const cur = currency === 'BRL' ? 'R$ ' : (currency ? currency + ' ' : '');
+        value.textContent = cur + fmt(price);
+        if (ch != null && !Number.isNaN(ch)) {
+          change.textContent = (ch >= 0 ? '+' : '') + Number(ch).toFixed(2) + '%';
+          change.classList.toggle('is-up', ch >= 0);
+          change.classList.toggle('is-down', ch < 0);
         }
-      } catch (_) {}
+        wrap.hidden = false;
+      }
     }
 
     // ===== Verdict =====
@@ -396,6 +412,8 @@
         const data = await res.json();
         currentData = data;
         plausible('ticker_view', { ticker: tickerDisplay, period });
+
+        renderQuoteFromData(data);
 
         const labels = data.dates.map(d => new Date(d).toLocaleDateString('pt-BR'));
         renderPriceChart(data, labels);
@@ -541,8 +559,11 @@
       renderIndicators(analysis);
     }
 
-    // ===== Backtest =====
+    // ===== Backtest (lazy via IntersectionObserver) =====
+    let backtestStarted = false;
     async function loadBacktest() {
+      if (backtestStarted) return;
+      backtestStarted = true;
       try {
         const res = await fetch('/api/backtest/' + encodeURIComponent(tickerDisplay));
         if (!res.ok) {
@@ -554,6 +575,22 @@
       } catch (_) {
         document.getElementById('backtestContent').innerHTML = '<p style="color:var(--muted);margin:0">Não foi possível carregar o backtest agora.</p>';
       }
+    }
+
+    function setupLazyBacktest() {
+      const target = document.getElementById('backtestContent');
+      if (!target) return;
+      if (!('IntersectionObserver' in window)) {
+        setTimeout(loadBacktest, 1500);
+        return;
+      }
+      const io = new IntersectionObserver((entries) => {
+        if (entries.some(e => e.isIntersecting)) {
+          io.disconnect();
+          loadBacktest();
+        }
+      }, { rootMargin: '200px' });
+      io.observe(target);
     }
 
     function renderBacktest(data) {
@@ -595,9 +632,8 @@
     // ===== Boot =====
     document.addEventListener('DOMContentLoaded', () => {
       loadFavoriteState();
-      loadQuote();
       fetchAndPlot(initialPeriod);
-      loadBacktest();
+      setupLazyBacktest();
     });
   </script>
 </body>
