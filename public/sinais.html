@@ -25,9 +25,14 @@
   {{app_shell}}
 
   <main class="container">
-    <header style="margin-bottom:20px" class="fade-up">
+    <header style="margin-bottom:16px" class="fade-up">
       <h1>Sinais do dia</h1>
-      <p style="color:var(--muted);margin:4px 0 0">Ativos do nosso universo padrão com cruzamentos, momentum ou zonas de RSI nos últimos 5 pregões.</p>
+      <p style="color:var(--muted);margin:4px 0 12px">Ativos com cruzamentos, momentum ou zonas de RSI nos últimos 5 pregões.</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" role="tablist" aria-label="Escopo do universo">
+        <button class="chip is-active" id="scopeB3" data-scope="b3">🇧🇷 B3 (ações, BDRs, FIIs, ETFs)</button>
+        <button class="chip" id="scopeGlobal" data-scope="global">🌎 + Cripto, Câmbio, US</button>
+      </div>
+      <p style="color:var(--muted);font-size:11px;margin:8px 0 0">B3 vem do <a href="https://brapi.dev" style="color:var(--muted)">Brapi</a> (rápido, sem limites). Global usa Yahoo Finance, pode demorar mais ou falhar em horário de pico.</p>
     </header>
 
     <div id="loadingState" class="signals-empty fade-up" role="status">
@@ -74,6 +79,8 @@
       try { return new Date(iso).toLocaleDateString('pt-BR'); } catch (_) { return ''; }
     }
 
+    let currentScope = 'b3';
+
     async function loadSignals() {
       const loading = document.getElementById('loadingState');
       const error = document.getElementById('errorState');
@@ -83,7 +90,8 @@
       results.hidden = true;
 
       try {
-        const res = await fetch('/api/signals');
+        const url = currentScope === 'global' ? '/api/signals?global=1' : '/api/signals';
+        const res = await fetch(url);
         if (!res.ok) throw new Error('http ' + res.status);
         const data = await res.json();
         render(data);
@@ -131,6 +139,14 @@
         grid.innerHTML = '<div class="signals-empty card">📭 Nenhum sinal novo no último pregão. Volte amanhã ou <a href="/alertas">configure alertas</a> por e-mail.</div>';
       }
     }
+
+    document.querySelectorAll('[data-scope]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-scope]').forEach((b) => b.classList.toggle('is-active', b === btn));
+        currentScope = btn.dataset.scope;
+        loadSignals();
+      });
+    });
 
     loadSignals();
   </script>

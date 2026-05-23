@@ -59,11 +59,19 @@ function aggregateSignals(perTickerResults) {
   return buckets;
 }
 
+// Default universe: B3 only (covered by Brapi, no Yahoo calls needed).
+// Global tickers are available via the `global=1` query param on /api/signals.
 const DEFAULT_UNIVERSE = [
   "PETR4", "VALE3", "ITUB4", "BBDC4", "BBAS3", "MGLU3", "TOTS3", "LWSA3",
   "WEGE3", "RENT3", "LREN3", "JBSS3", "BRFS3", "ABEV3", "B3SA3", "BPAC11",
+  "ITSA4", "EQTL3", "RADL3", "RDOR3", "EMBR3", "PRIO3",
   "BOVA11", "IVVB11", "SMAL11", "HASH11",
   "AAPL34", "MSFT34", "GOGL34", "AMZO34", "TSLA34", "NVDA34",
+  "HGLG11", "KNRI11", "MXRF11", "XPML11",
+];
+
+// Optional global universe (uses Yahoo, may rate-limit).
+const GLOBAL_UNIVERSE = [
   "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA",
   "BTC-USD", "ETH-USD", "SOL-USD",
   "USDBRL=X", "EURBRL=X",
@@ -74,4 +82,5 @@ module.exports = {
   aggregateSignals,
   isWithinDays,
   DEFAULT_UNIVERSE,
+  GLOBAL_UNIVERSE,
 };
