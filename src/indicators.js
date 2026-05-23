@@ -65,7 +65,9 @@ function analyzePrice(currentPrice, currentSMA200) {
   return {
     value: currentPrice,
     signal: currentPrice > currentSMA200 ? "entry" : "exit",
-    message: currentPrice > currentSMA200 ? "Acima da MA200 (Entrada)" : "Abaixo da MA200 (Saída)",
+    message: currentPrice > currentSMA200
+      ? "Acima da média de 1 ano — favorece alta"
+      : "Abaixo da média de 1 ano — favorece baixa",
   };
 }
 
@@ -73,9 +75,9 @@ function analyzeRSI(currentRSI) {
   if (currentRSI == null) {
     return { value: currentRSI, signal: "neutral", message: "Sem dados suficientes" };
   }
-  if (currentRSI > 70) return { value: currentRSI, signal: "exit", message: "Sobrecomprado (Saída)" };
-  if (currentRSI < 30) return { value: currentRSI, signal: "entry", message: "Sobrevendido (Entrada)" };
-  return { value: currentRSI, signal: "neutral", message: "Neutro" };
+  if (currentRSI > 70) return { value: currentRSI, signal: "exit", message: "Sobrecomprado — subiu rápido, pode pausar" };
+  if (currentRSI < 30) return { value: currentRSI, signal: "entry", message: "Sobrevendido — caiu demais, pode reagir" };
+  return { value: currentRSI, signal: "neutral", message: "Em zona neutra" };
 }
 
 function analyzeMACD(currentLine, currentSignal, prevLine, prevSignal, currentHistogram) {
@@ -96,16 +98,16 @@ function analyzeMACD(currentLine, currentSignal, prevLine, prevSignal, currentHi
 
   if (prevDiff <= 0 && currDiff > 0) {
     signal = "entry";
-    message = "MACD cruzou acima da linha de sinal (Tendência de alta)";
+    message = "Cruzou acima da linha de sinal — momentum virou para cima";
   } else if (prevDiff >= 0 && currDiff < 0) {
     signal = "exit";
-    message = "MACD cruzou abaixo da linha de sinal (Tendência de baixa)";
+    message = "Cruzou abaixo da linha de sinal — momentum virou para baixo";
   } else if (currDiff > 0) {
     signal = "entry";
-    message = "MACD acima da linha de sinal";
+    message = "Acima da linha de sinal — momentum a favor da alta";
   } else if (currDiff < 0) {
     signal = "exit";
-    message = "MACD abaixo da linha de sinal";
+    message = "Abaixo da linha de sinal — momentum a favor da baixa";
   }
 
   return {
@@ -124,10 +126,10 @@ function analyzeCross(currentSMA50, currentSMA200, prevSMA50, prevSMA200) {
   const currentCross = currentSMA50 > currentSMA200;
   const prevCross = prevSMA50 != null && prevSMA200 != null ? prevSMA50 > prevSMA200 : null;
 
-  if (prevCross === false && currentCross) return { signal: "entry", message: "Golden Cross (Entrada)" };
-  if (prevCross === true && !currentCross) return { signal: "exit", message: "Death Cross (Saída)" };
-  if (currentCross) return { signal: "entry", message: "MA50 acima da MA200" };
-  return { signal: "exit", message: "MA50 abaixo da MA200" };
+  if (prevCross === false && currentCross) return { signal: "entry", message: "Golden Cross — começo de tendência de alta" };
+  if (prevCross === true && !currentCross) return { signal: "exit", message: "Death Cross — começo de tendência de baixa" };
+  if (currentCross) return { signal: "entry", message: "MA50 acima da MA200 — favorável" };
+  return { signal: "exit", message: "MA50 abaixo da MA200 — desfavorável" };
 }
 
 function analyzeIndicators(data, index) {

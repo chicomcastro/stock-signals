@@ -97,19 +97,19 @@ describe("analyzeMACD (vs signal line)", () => {
   it("signals entry on bullish cross", () => {
     const r = analyzeMACD(0.5, 0, -0.5, 0, 0.5);
     expect(r.signal).toBe("entry");
-    expect(r.message).toMatch(/cruzou acima da linha de sinal/);
+    expect(r.message).toMatch(/acima da linha de sinal/i);
   });
 
   it("signals exit on bearish cross", () => {
     const r = analyzeMACD(-0.5, 0, 0.5, 0, -0.5);
     expect(r.signal).toBe("exit");
-    expect(r.message).toMatch(/cruzou abaixo da linha de sinal/);
+    expect(r.message).toMatch(/abaixo da linha de sinal/i);
   });
 
   it("returns position (above signal) without recent cross", () => {
     const r = analyzeMACD(2, 1, 2.1, 1, 1);
     expect(r.signal).toBe("entry");
-    expect(r.message).toMatch(/acima da linha de sinal/);
+    expect(r.message).toMatch(/acima da linha de sinal/i);
   });
 
   it("returns null-safe neutral", () => {

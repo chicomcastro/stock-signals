@@ -142,27 +142,49 @@
     <div class="framework-drawer__panel" role="dialog" aria-modal="true" aria-label="Como ler os sinais">
       <button class="framework-drawer__close" data-close-drawer aria-label="Fechar">×</button>
       <h2 style="margin-top:0">Como ler os sinais</h2>
+      <p style="color:var(--muted);font-size:13px;margin:0 0 18px">A análise técnica funciona por probabilidades, não certezas. Os indicadores abaixo mostram o que o mercado <strong>tende</strong> a fazer em cenários parecidos no passado.</p>
 
-      <div style="margin-bottom:16px">
-        <h3>🔹 Preço × Média de 200 dias</h3>
-        <p>É o termômetro de longo prazo. Preço acima dela = mercado favorece a alta. Preço abaixo = mercado favorece a baixa.</p>
-      </div>
-      <div style="margin-bottom:16px">
-        <h3>🔹 Cruzamento das médias (50 × 200)</h3>
-        <p><b>Golden Cross</b>: média curta cruza acima da longa — clássico início de tendência de alta. <b>Death Cross</b>: o oposto.</p>
-      </div>
-      <div style="margin-bottom:16px">
-        <h3>🔹 RSI — Força do movimento</h3>
-        <p>Acima de 70 = subiu demais (pode pausar). Abaixo de 30 = caiu demais (pode reagir).</p>
-      </div>
-      <div style="margin-bottom:16px">
-        <h3>🔹 MACD — Momentum</h3>
-        <p>Quando a linha do MACD cruza <b>acima</b> da linha de sinal → momentum virando para alta. Quando cruza <b>abaixo</b> → para baixa.</p>
+      <div style="margin-bottom:20px">
+        <h3>🟦 Preço × média de 1 ano (MA200)</h3>
+        <p style="font-size:13px">A MA200 é o preço médio dos últimos 200 pregões (≈1 ano). É o "termômetro" de longo prazo.</p>
+        <p style="font-size:13px"><strong>Preço acima dela</strong> = hoje o mercado paga mais que pagou em média no último ano. Costuma indicar tendência de alta sustentada (bull market).</p>
+        <p style="font-size:13px"><strong>Preço abaixo dela</strong> = pagam menos. Tendência de baixa (bear market).</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:0">💡 Por que importa? Fundos institucionais e algoritmos usam essa linha como gatilho de compra/venda. Isso cria efeito profecia auto-realizada.</p>
       </div>
 
-      <div class="card card--quiet" style="margin-top:20px">
-        <h3 style="margin-top:0">Combinar dá mais confiança</h3>
-        <p style="margin:0;font-size:13px">Um sinal sozinho pode dar falso positivo. Quando dois ou três aparecem juntos — por exemplo, Golden Cross + RSI saindo da sobrevenda + MACD cruzando para cima — a probabilidade da tendência se confirmar aumenta.</p>
+      <div style="margin-bottom:20px">
+        <h3>🟩 Cruzamento das médias (MA50 × MA200)</h3>
+        <p style="font-size:13px">A MA50 reage rápido às mudanças de preço; a MA200, lentamente. Quando elas cruzam, sinaliza mudança de tendência de longo prazo.</p>
+        <p style="font-size:13px"><strong>Golden Cross</strong> (🟢 estrela amarela no gráfico): MA50 cruza acima da MA200. Início clássico de tendência de alta. Costuma durar meses.</p>
+        <p style="font-size:13px"><strong>Death Cross</strong> (🔴 estrela vermelha): o inverso. Início de tendência de baixa.</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:0">⚠️ Limitação: são sinais "lentos". Só aparecem depois que a tendência já está bem estabelecida. Mas quando aparecem, costumam confirmar.</p>
+      </div>
+
+      <div style="margin-bottom:20px">
+        <h3>🟪 RSI — Força do movimento</h3>
+        <p style="font-size:13px">Mede o ritmo das altas vs baixas nos últimos 14 pregões. Vai de 0 a 100.</p>
+        <p style="font-size:13px"><strong>Acima de 70</strong>: ativo subiu rápido demais. Pode pausar ou cair pra "tomar fôlego". Comprar nessa zona é mais arriscado.</p>
+        <p style="font-size:13px"><strong>Abaixo de 30</strong>: caiu demais. Pode reagir para cima — costuma ser ponto de atenção para entrada.</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:0">⚠️ Em tendências fortes, RSI pode ficar fora da faixa 30-70 por semanas. Não use sozinho como gatilho automático.</p>
+      </div>
+
+      <div style="margin-bottom:20px">
+        <h3>🔷 MACD — Momentum</h3>
+        <p style="font-size:13px">Detecta quando o preço muda de "marcha". Compara duas médias do preço (rápida e lenta) e mostra a diferença entre elas.</p>
+        <p style="font-size:13px"><strong>Cruzamento bullish</strong> (🔺 triângulo verde): a linha do MACD cruza ACIMA da linha de sinal. O preço está acelerando para cima.</p>
+        <p style="font-size:13px"><strong>Cruzamento bearish</strong> (🔻 triângulo vermelho): cruza ABAIXO. Está acelerando para baixo.</p>
+        <p style="font-size:13px"><strong>Histograma</strong> (barras coloridas): mostra a distância entre as duas linhas. Quanto maiores as barras, mais forte a tendência atual. Diminuindo? A tendência está perdendo força.</p>
+      </div>
+
+      <div class="card card--quiet" style="margin-top:24px">
+        <h3 style="margin-top:0">🎯 Combinar dá mais confiança</h3>
+        <p style="margin:0 0 8px;font-size:13px">Um indicador isolado pode dar falso sinal. Quando 2-3 apontam na mesma direção, a probabilidade aumenta bastante.</p>
+        <p style="margin:0;font-size:13px"><strong>Exemplo forte de compra:</strong> preço acima da MA200 (tendência boa) + RSI saindo da sobrevenda (estava caro, agora reage) + MACD cruzando para cima (momentum confirma) + Golden Cross recente (médias longas alinhadas).</p>
+      </div>
+
+      <div class="card card--quiet" style="margin-top:16px;background:var(--warn-soft);border-color:var(--warn)">
+        <h3 style="margin-top:0">⚠️ Importante</h3>
+        <p style="margin:0;font-size:13px">Análise técnica é <strong>probabilística</strong>, não determinística. Notícia ruim de balanço, crise política, decisão do FED — qualquer evento externo pode virar a tendência em um dia. Use os sinais como um <em>fator</em> na sua decisão, nunca como única razão. E sempre defina stop-loss.</p>
       </div>
     </div>
   </div>
@@ -323,11 +345,36 @@
       const wins = [analysis.price.signal, analysis.rsi.signal, analysis.macd.signal, analysis.cross.signal];
       const entries = wins.filter(s => s === 'entry').length;
       const exits = wins.filter(s => s === 'exit').length;
-      if (entries >= 3) return { tone: 'up', icon: '📈', title: 'Sinais alinhados para alta', sub: 'Mais de um indicador aponta na mesma direção. Vale acompanhar.' };
-      if (exits >= 3) return { tone: 'down', icon: '📉', title: 'Sinais alinhados para baixa', sub: 'Vários indicadores apontam fraqueza. Cautela.' };
-      if (entries > exits) return { tone: 'mixed', icon: '🟡', title: 'Tendência levemente positiva', sub: 'Alguns sinais positivos, mas sem confirmação forte.' };
-      if (exits > entries) return { tone: 'mixed', icon: '🟡', title: 'Tendência levemente negativa', sub: 'Alguns sinais negativos, mas sem confirmação forte.' };
-      return { tone: 'neutral', icon: '⚖️', title: 'Mercado indefinido', sub: 'Os indicadores estão divididos. Melhor aguardar um sinal mais claro.' };
+      if (entries >= 3) return {
+        tone: 'up',
+        icon: '📈',
+        title: 'Cenário favorável para alta',
+        sub: 'Pelo menos 3 indicadores apontam na mesma direção. Historicamente, esse alinhamento aumenta a chance de o preço subir nas próximas semanas — mas não é garantia, é probabilidade mais alta que o normal.',
+      };
+      if (exits >= 3) return {
+        tone: 'down',
+        icon: '📉',
+        title: 'Cenário desfavorável (vento contra)',
+        sub: 'Pelo menos 3 indicadores apontam para baixo. O mercado está dando sinais claros de fraqueza. Investidores costumam ser mais cautelosos com novas compras quando o cenário está assim.',
+      };
+      if (entries > exits) return {
+        tone: 'mixed',
+        icon: '🟢',
+        title: 'Viés positivo, sem confirmação forte',
+        sub: 'Alguns indicadores apontam para alta, mas faltam confirmações para ter convicção. Pode valer a pena esperar mais um sinal se alinhar antes de tomar uma decisão grande.',
+      };
+      if (exits > entries) return {
+        tone: 'mixed',
+        icon: '🟠',
+        title: 'Viés negativo, sem confirmação forte',
+        sub: 'Alguns indicadores apontam para baixa, mas a tendência ainda não está clara. Vale acompanhar de perto nos próximos pregões antes de qualquer movimento.',
+      };
+      return {
+        tone: 'neutral',
+        icon: '⚖️',
+        title: 'Mercado lateral — sem direção clara',
+        sub: 'Os indicadores estão divididos. O ativo provavelmente está oscilando dentro de uma faixa. A análise técnica é menos confiável nesse cenário — esperar o mercado decidir costuma ser mais seguro que tentar adivinhar.',
+      };
     }
 
     function renderVerdict(analysis) {
@@ -366,20 +413,20 @@
       const el = document.getElementById('indicatorList');
       el.innerHTML =
         indicatorRow(
-          'Preço × média de 200 dias',
+          'Preço × média de 1 ano (MA200)',
           'R$ ' + fmt(analysis.price.value),
-          'Acima da MA200 sugere tendência de alta de longo prazo.',
+          'Hoje o mercado paga mais ou menos que pagou em média no último ano?',
           analysis.price.signal,
           analysis.price.message,
-          'A MA200 é a média móvel de 200 dias. Preço acima = mercado favorece alta no longo prazo. Abaixo = favorece baixa.'
+          'A MA200 é o preço médio dos últimos 200 pregões (≈1 ano).\n\nPreço ACIMA dela = hoje pagam mais que a média do ano. Costuma indicar mercado em alta sustentada (bull market).\n\nPreço ABAIXO = pagam menos. Costuma indicar mercado em baixa (bear market).\n\nFundos e algoritmos usam essa linha como referência — vira profecia auto-realizada.'
         ) +
         indicatorRow(
           'Força do movimento (RSI)',
           fmt(analysis.rsi.value),
-          'Mede se o ativo está esticado para cima ou para baixo.',
+          'Mede o ritmo da subida vs descida nos últimos 14 pregões.',
           analysis.rsi.signal,
           analysis.rsi.message,
-          'RSI > 70: pode estar caro/esticado, próximo de uma pausa. RSI < 30: pode estar barato/esticado para baixo, próximo de uma reação.'
+          'RSI vai de 0 a 100 e mede se o ativo está acelerando mais para cima ou para baixo.\n\nAcima de 70: subiu rápido demais. Pode pausar ou cair pra "tomar fôlego".\n\nAbaixo de 30: caiu demais. Pode reagir.\n\nEm tendências fortes, RSI fica fora da faixa 30-70 por semanas. Não é gatilho automático, é alerta de zona extrema.'
         ) +
         indicatorRow(
           'Momentum (MACD)',
@@ -387,15 +434,15 @@
           'Mostra se o preço está acelerando ou perdendo força.',
           analysis.macd.signal,
           analysis.macd.message,
-          'Quando a linha do MACD cruza acima da linha de sinal, o momentum está virando para cima. Cruzando abaixo, para baixo.'
+          'O MACD compara duas médias do preço para detectar mudanças de momentum (a "marcha" do ativo).\n\nLinha do MACD cruza ACIMA da linha de sinal = momentum virou para cima.\nCruza ABAIXO = momentum virou para baixo.\n\nO histograma (barras) mostra a distância entre as linhas. Quanto maior, mais forte a tendência atual.'
         ) +
         indicatorRow(
-          'Cruzamento médias 50×200',
+          'Cruzamento médias 50 × 200',
           '—',
-          'Golden Cross (alta) ou Death Cross (baixa).',
+          'Cruzamento das médias de curto (50d) e longo (200d) prazo.',
           analysis.cross.signal,
           analysis.cross.message,
-          'A média de 50 dias é mais reativa que a de 200. Quando a curta cruza acima da longa, o mercado costuma ver isso como início de tendência de alta. O oposto é o Death Cross.'
+          'A MA50 reage rápido às mudanças de preço; a MA200, lentamente.\n\nGolden Cross = MA50 cruza acima da MA200. Clássico início de tendência de alta. Costuma durar meses.\n\nDeath Cross = MA50 cruza abaixo da MA200. Início de tendência de baixa.\n\nLimitação: sinais lentos. Só aparecem quando a tendência já se estabeleceu.'
         );
     }
 
