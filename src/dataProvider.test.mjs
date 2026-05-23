@@ -17,6 +17,7 @@ beforeEach(() => {
   dp.historicalCache.clear();
   dp.quoteCache.clear();
   dp.searchCache.clear();
+  dp.errorCache.clear();
 });
 
 function makeFakeQuotes(n = 250) {
@@ -33,6 +34,10 @@ function makeFakeQuotes(n = 250) {
     });
   }
   return out;
+}
+
+function makeChartReturn(n = 250, meta = {}) {
+  return { quotes: makeFakeQuotes(n), meta: { symbol: "PETR4.SA", regularMarketPrice: 30, currency: "BRL", ...meta } };
 }
 
 describe("classifyError", () => {
@@ -96,7 +101,7 @@ describe("retry", () => {
 
 describe("getHistoricalAnalysis", () => {
   it("returns enriched payload with indicators and analysis", async () => {
-    stub.chart.mockResolvedValue({ quotes: makeFakeQuotes(250) });
+    stub.chart.mockResolvedValue(makeChartReturn(250));
     const data = await dp.getHistoricalAnalysis("PETR4.SA", "3M");
     expect(data.ticker).toBe("PETR4.SA");
     expect(data.dates.length).toBeGreaterThan(0);
@@ -108,7 +113,7 @@ describe("getHistoricalAnalysis", () => {
   });
 
   it("serves from cache on second call", async () => {
-    stub.chart.mockResolvedValue({ quotes: makeFakeQuotes(250) });
+    stub.chart.mockResolvedValue(makeChartReturn(250));
     await dp.getHistoricalAnalysis("PETR4.SA", "3M");
     const second = await dp.getHistoricalAnalysis("PETR4.SA", "3M");
     expect(second.cache).toBe("hit");
@@ -126,14 +131,96 @@ describe("getHistoricalAnalysis", () => {
   });
 
   it("returns 404 when Yahoo returns empty quotes", async () => {
-    stub.chart.mockResolvedValue({ quotes: [] });
+    stub.chart.mockResolvedValue({ quotes: [], meta: {} });
     await expect(dp.getHistoricalAnalysis("EMPTY.SA", "3M")).rejects.toMatchObject({ status: 404 });
   });
 
   it("handles ALL period without extra-history fetch", async () => {
-    stub.chart.mockResolvedValue({ quotes: makeFakeQuotes(300) });
+    stub.chart.mockResolvedValue(makeChartReturn(300));
     const data = await dp.getHistoricalAnalysis("PETR4.SA", "ALL");
     expect(data.period).toBe("ALL");
+  });
+
+  it("populates quote cache from chart meta", async () => {
+    stub.chart.mockResolvedValue(makeChartReturn(250, {
+      symbol: "PETR4.SA", shortName: "Petrobras", regularMarketPrice: 38, regularMarketChangePercent: 1.5, currency: "BRL",
+    }));
+    await dp.getHistoricalAnalysis("PETR4.SA", "3M");
+    const cached = dp.quoteCache.get("quote|PETR4.SA");
+    expect(cached.shortName).toBe("Petrobras");
+    expect(cached.regularMarketPrice).toBe(38);
+  });
+
+  it("serves stale cache when Yahoo returns 429", async () => {
+    stub.chart.mockResolvedValue(makeChartReturn(250));
+    const fresh = await dp.getHistoricalAnalysis("PETR4.SA", "3M");
+    expect(fresh.cache).toBe("miss");
+
+    // Force expiration by clearing fresh map and re-inserting with negative TTL
+    const key = "hist|PETR4.SA|3M";
+    const value = dp.historicalCache.get(key);
+    dp.historicalCache.clear();
+    dp.historicalCache.set(key, value, -1);
+
+    stub.chart.mockReset();
+    stub.chart.mockRejectedValue(new Error("Too Many Requests"));
+    const stale = await dp.getHistoricalAnalysis("PETR4.SA", "3M");
+    expect(stale.cache).toBe("stale");
+    expect(stale.dates.length).toBe(value.dates.length);
+  });
+
+  it("caches error briefly to avoid hammering Yahoo", async () => {
+    stub.chart.mockRejectedValue(new Error("Too Many Requests"));
+    await expect(dp.getHistoricalAnalysis("ZZ.SA", "3M")).rejects.toMatchObject({ status: 429 });
+    const callsAfterFirst = stub.chart.mock.calls.length;
+    // Second call should not hit Yahoo (error cached)
+    await expect(dp.getHistoricalAnalysis("ZZ.SA", "3M")).rejects.toMatchObject({ status: 429 });
+    expect(stub.chart.mock.calls.length).toBe(callsAfterFirst);
+  });
+
+  it("dedupes concurrent in-flight requests for same key", async () => {
+    let resolveFn;
+    stub.chart.mockReturnValue(new Promise((r) => { resolveFn = r; }));
+    const p1 = dp.getHistoricalAnalysis("PETR4.SA", "3M");
+    const p2 = dp.getHistoricalAnalysis("PETR4.SA", "3M");
+    resolveFn(makeChartReturn(250));
+    const [r1, r2] = await Promise.all([p1, p2]);
+    expect(stub.chart).toHaveBeenCalledTimes(1);
+    expect(r1.dates.length).toBe(r2.dates.length);
+  });
+});
+
+describe("getHistoricalAnalysis edge cases", () => {
+  it("derives change from last/prev close when meta lacks regularMarketChangePercent", async () => {
+    stub.chart.mockResolvedValue({
+      quotes: makeFakeQuotes(250),
+      meta: { symbol: "X.SA", currency: "BRL", shortName: "Foo" },
+    });
+    await dp.getHistoricalAnalysis("X.SA", "3M");
+    const q = dp.quoteCache.get("quote|X.SA");
+    expect(q.regularMarketChangePercent).not.toBeNull();
+  });
+
+  it("handles raw with no meta gracefully", async () => {
+    stub.chart.mockResolvedValue({ quotes: makeFakeQuotes(250) });
+    const data = await dp.getHistoricalAnalysis("Y.SA", "3M");
+    expect(data.dates.length).toBeGreaterThan(0);
+  });
+});
+
+describe("getQuote with stale-on-error", () => {
+  it("returns stale cache when Yahoo errors", async () => {
+    stub.quote.mockResolvedValue({ symbol: "X", shortName: "Co", regularMarketPrice: 10 });
+    await dp.getQuote("X");
+    const key = "quote|X";
+    const value = dp.quoteCache.get(key);
+    dp.quoteCache.clear();
+    dp.quoteCache.set(key, value, -1);
+
+    stub.quote.mockReset();
+    stub.quote.mockRejectedValue(new Error("Too Many Requests"));
+    const stale = await dp.getQuote("X");
+    expect(stale.shortName).toBe("Co");
   });
 });
 

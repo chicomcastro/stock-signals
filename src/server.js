@@ -126,26 +126,16 @@ function createApp({ subscriberStore } = {}) {
     try {
       if (!isValidTickerInput(req.params.ticker)) return res.status(400).send("Ticker inválido");
       const normalized = normalizeTicker(req.params.ticker);
-      let name = displayTicker(normalized);
-      let price = null;
-      let changePercent = null;
-      let currency = null;
-      try {
-        const quote = await getQuote(normalized);
-        name = quote.shortName || name;
-        price = quote.regularMarketPrice;
-        changePercent = quote.regularMarketChangePercent;
-        currency = quote.currency;
-      } catch (_) {}
+      const display = displayTicker(normalized);
       const svg = tickerOgSvg({
-        ticker: displayTicker(normalized),
-        name,
-        price,
-        changePercent,
-        currency,
+        ticker: display,
+        name: display,
+        price: null,
+        changePercent: null,
+        currency: null,
         signalLabel: "Análise técnica · stock-signals",
       });
-      res.type("image/svg+xml").setHeader("Cache-Control", "public, max-age=600").send(svg);
+      res.type("image/svg+xml").setHeader("Cache-Control", "public, max-age=86400").send(svg);
     } catch (err) {
       res.status(500).send("Erro ao gerar imagem");
     }
@@ -194,27 +184,45 @@ function createApp({ subscriberStore } = {}) {
       const period = "6M";
       const tickers = universe.slice(0, limit);
       const referenceDate = new Date();
+      const concurrency = Math.max(1, Math.min(Number(process.env.SIGNALS_CONCURRENCY || 3), 8));
 
-      const results = await Promise.allSettled(
-        tickers.map(async (t) => {
+      const ok = [];
+      let stopped = false;
+      let consecutiveRateLimits = 0;
+
+      async function processTicker(t) {
+        if (stopped) return;
+        try {
           const normalized = normalizeTicker(t);
           const data = await getHistoricalAnalysis(normalized, period);
+          consecutiveRateLimits = 0;
           const signals = extractDailySignals(data.analysis, data.dates, 5, referenceDate);
-          return { ticker: displayTicker(normalized), normalized, signals };
-        })
-      );
+          if (signals.length > 0) {
+            ok.push({ ticker: displayTicker(normalized), normalized, signals });
+          }
+        } catch (err) {
+          if (err.status === 429) {
+            consecutiveRateLimits++;
+            if (consecutiveRateLimits >= 3) stopped = true;
+          }
+        }
+      }
 
-      const ok = results
-        .filter((r) => r.status === "fulfilled")
-        .map((r) => r.value)
-        .filter((r) => r.signals.length > 0);
+      let i = 0;
+      while (i < tickers.length && !stopped) {
+        const batch = tickers.slice(i, i + concurrency);
+        await Promise.all(batch.map(processTicker));
+        i += concurrency;
+      }
 
       const buckets = aggregateSignals(ok);
-      res.setHeader("Cache-Control", "public, max-age=1800");
+      res.setHeader("Cache-Control", "public, max-age=1800, s-maxage=1800");
       res.json({
         date: referenceDate.toISOString().slice(0, 10),
         universeSize: tickers.length,
+        processed: Math.min(i, tickers.length),
         withSignals: ok.length,
+        rateLimited: stopped,
         buckets,
       });
     } catch (error) {
@@ -337,14 +345,16 @@ function createApp({ subscriberStore } = {}) {
     const display = displayTicker(normalized);
     const templatePath = path.join(PUBLIC_DIR, "chart.html");
 
-    fs.readFile(templatePath, "utf8", async (err, template) => {
+    fs.readFile(templatePath, "utf8", (err, template) => {
       if (err) return res.status(500).send("Erro ao carregar o template");
 
-      let assetName = "";
+      // Não chamamos Yahoo no render — o nome amigável vem via /data no cliente.
+      // Mas se já tivermos cache, aproveitamos para meta tags melhores.
+      let cachedName = "";
       try {
-        const quote = await getQuote(normalized);
-        if (quote.shortName && quote.shortName !== display) {
-          assetName = ` — ${quote.shortName}`;
+        const cachedQuote = require("./dataProvider").quoteCache.get(`quote|${normalized}`);
+        if (cachedQuote && cachedQuote.shortName && cachedQuote.shortName !== display) {
+          cachedName = ` — ${cachedQuote.shortName}`;
         }
       } catch (_) {}
 
@@ -354,7 +364,7 @@ function createApp({ subscriberStore } = {}) {
 
       const html = injectTemplate(template, {
         ticker: htmlAttr(display),
-        asset_name: htmlAttr(assetName),
+        asset_name: htmlAttr(cachedName),
         page_title: htmlAttr(title),
         page_description: htmlAttr(description),
         canonical_url: htmlAttr(`${baseUrl}/${display}`),
