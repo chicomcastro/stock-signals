@@ -233,6 +233,24 @@ describe("/api/signals", () => {
     expect(res.status).toBe(200);
     expect(res.body.universeSize).toBeLessThanOrEqual(2);
   });
+
+  it("default universe excludes global (no Yahoo calls)", async () => {
+    stub.chart.mockResolvedValue({ quotes: fakeQuotes(400) });
+    const res = await request(app).get("/api/signals");
+    expect(res.status).toBe(200);
+    const calls = stub.chart.mock.calls.map((c) => c[0]);
+    // No global tickers (AAPL, BTC-USD, USDBRL=X) should have been called
+    expect(calls).not.toContain("AAPL");
+    expect(calls).not.toContain("BTC-USD");
+    expect(calls).not.toContain("USDBRL=X");
+  });
+
+  it("?global=1 expands universe to include US/crypto/FX", async () => {
+    stub.chart.mockResolvedValue({ quotes: fakeQuotes(400) });
+    const res = await request(app).get("/api/signals?global=1");
+    expect(res.status).toBe(200);
+    expect(res.body.universeSize).toBeGreaterThan(30);
+  });
 });
 
 describe("/api/search and /api/quote", () => {
@@ -242,13 +260,11 @@ describe("/api/search and /api/quote", () => {
     expect(res.body).toEqual([]);
   });
 
-  it("search returns results", async () => {
-    stub.search.mockResolvedValue({
-      quotes: [{ symbol: "PETR4.SA", shortname: "Petrobras", exchange: "SAO", quoteType: "EQUITY" }],
-    });
+  it("search returns local results without calling Yahoo", async () => {
     const res = await request(app).get("/api/search?q=petr");
     expect(res.status).toBe(200);
-    expect(res.body[0].symbol).toBe("PETR4.SA");
+    expect(res.body.some((r) => r.symbol === "PETR4")).toBe(true);
+    expect(stub.search).not.toHaveBeenCalled();
   });
 
   it("quote returns summary", async () => {

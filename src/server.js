@@ -7,7 +7,7 @@ const { normalizeTicker, displayTicker, isValidTickerInput } = require("./ticker
 const { getHistoricalAnalysis, getHistoricalAnalysisBatch, getQuote, searchTickers } = require("./dataProvider");
 const { tickerOgSvg, defaultOgSvg } = require("./og");
 const { backtestAllForTicker } = require("./backtest");
-const { extractDailySignals, aggregateSignals, DEFAULT_UNIVERSE } = require("./signals");
+const { extractDailySignals, aggregateSignals, DEFAULT_UNIVERSE, GLOBAL_UNIVERSE } = require("./signals");
 const { createSubscriberStore, isValidEmail, sanitizeTickers } = require("./subscribers");
 
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
@@ -175,12 +175,16 @@ function createApp({ subscriberStore } = {}) {
 
   app.get("/api/signals", apiLimiter, async (req, res) => {
     try {
-      const universe = (req.query.universe ? String(req.query.universe).split(",") : DEFAULT_UNIVERSE)
+      const includeGlobal = req.query.global === "1" || req.query.global === "true";
+      const baseUniverse = req.query.universe
+        ? String(req.query.universe).split(",")
+        : (includeGlobal ? [...DEFAULT_UNIVERSE, ...GLOBAL_UNIVERSE] : DEFAULT_UNIVERSE);
+      const universe = baseUniverse
         .map((t) => t.trim())
         .filter(isValidTickerInput)
-        .slice(0, 60);
+        .slice(0, 80);
 
-      const limit = Math.min(Number(req.query.limit || universe.length), 60);
+      const limit = Math.min(Number(req.query.limit || universe.length), 80);
       const period = "6M";
       const tickers = universe.slice(0, limit);
       const referenceDate = new Date();

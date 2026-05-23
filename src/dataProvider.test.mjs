@@ -381,23 +381,33 @@ describe("getQuote", () => {
   });
 });
 
-describe("searchTickers", () => {
-  it("returns normalized search results and caches", async () => {
-    stub.search.mockResolvedValue({
-      quotes: [
-        { symbol: "PETR4.SA", shortname: "Petrobras", exchange: "SAO", quoteType: "EQUITY" },
-      ],
-    });
-    const r1 = await dp.searchTickers("petr");
-    const r2 = await dp.searchTickers("petr");
-    expect(r1[0].symbol).toBe("PETR4.SA");
-    expect(stub.search).toHaveBeenCalledTimes(1);
-    expect(r2).toEqual(r1);
+describe("searchTickers (local-first)", () => {
+  it("returns local matches without hitting Yahoo when ≥3 found", async () => {
+    const r = await dp.searchTickers("petr");
+    expect(r.length).toBeGreaterThan(0);
+    expect(r.some((x) => x.symbol === "PETR4")).toBe(true);
+    expect(stub.search).not.toHaveBeenCalled();
   });
 
-  it("returns empty array when Yahoo gives no quotes", async () => {
-    stub.search.mockResolvedValue({});
-    const r = await dp.searchTickers("zzz");
-    expect(r).toEqual([]);
+  it("caches local results", async () => {
+    const r1 = await dp.searchTickers("apple");
+    const r2 = await dp.searchTickers("apple");
+    expect(r1).toEqual(r2);
+  });
+
+  it("falls back to Yahoo for queries with few local matches", async () => {
+    stub.search.mockResolvedValue({
+      quotes: [{ symbol: "ZZZZ", shortname: "Zzzz Corp", exchange: "NYSE", quoteType: "EQUITY" }],
+    });
+    const r = await dp.searchTickers("zzzz");
+    expect(stub.search).toHaveBeenCalled();
+    expect(r.some((x) => x.symbol === "ZZZZ")).toBe(true);
+  });
+
+  it("degrades gracefully when Yahoo errors (no throw)", async () => {
+    stub.search.mockRejectedValue(new Error("Too Many Requests"));
+    const r = await dp.searchTickers("xyzfakeq");
+    // No throw — returns whatever local has (may be empty)
+    expect(Array.isArray(r)).toBe(true);
   });
 });

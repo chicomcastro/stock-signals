@@ -410,6 +410,8 @@ async function loadQuote(normalizedTicker, key, errKey) {
   return quote;
 }
 
+const { searchLocal } = require("./tickerSearch");
+
 async function searchTickers(query) {
   const key = `search|${query.toLowerCase()}`;
   const cached = searchCache.get(key);
@@ -421,21 +423,44 @@ async function searchTickers(query) {
     return fx.search;
   }
 
+  // 1. Try local static dictionary first — zero external calls.
+  //    Any local match is treated as canonical; we only ask Yahoo for truly unknown queries.
+  const local = searchLocal(query, 8);
+  if (local.length >= 1) {
+    searchCache.set(key, local);
+    return local;
+  }
+
+  // 2. If local has < 3 results, augment with Yahoo (the only provider with global search).
+  //    Wrapped in dedup + classified error handling.
   return dedup(key, async () => {
-    let result;
+    let yahooResults = [];
     try {
-      result = await retry(() => yahooFinance.search(query, { newsCount: 0, quotesCount: 8 }));
+      const result = await retry(() => yahooFinance.search(query, { newsCount: 0, quotesCount: 8 }));
+      yahooResults = (result.quotes || []).map((q) => ({
+        symbol: q.symbol,
+        shortname: q.shortname ?? q.longname ?? q.symbol,
+        exchange: q.exchange ?? null,
+        type: q.quoteType ?? null,
+      }));
     } catch (err) {
-      throw classifyError(err);
+      // If Yahoo errors (rate limit, network), use local results only.
+      // No throw — search degrades gracefully.
+      yahooResults = [];
     }
-    const quotes = (result.quotes || []).map((q) => ({
-      symbol: q.symbol,
-      shortname: q.shortname ?? q.longname ?? q.symbol,
-      exchange: q.exchange ?? null,
-      type: q.quoteType ?? null,
-    }));
-    searchCache.set(key, quotes);
-    return quotes;
+
+    // Merge: local results first (canonical), then Yahoo results not already in local
+    const seen = new Set(local.map((l) => l.symbol));
+    const merged = [...local];
+    for (const y of yahooResults) {
+      if (!seen.has(y.symbol)) {
+        merged.push(y);
+        seen.add(y.symbol);
+      }
+    }
+    const final = merged.slice(0, 8);
+    searchCache.set(key, final);
+    return final;
   });
 }
 

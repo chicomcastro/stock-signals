@@ -132,7 +132,8 @@
     </section>
 
     <footer class="app-footer">
-      Análises automáticas a partir de dados públicos. Não é recomendação de investimento.
+      <div>Análises automáticas a partir de dados públicos. Não é recomendação de investimento.</div>
+      <div id="dataSource" style="margin-top:6px;font-size:11px;opacity:0.7"></div>
     </footer>
   </main>
 
@@ -301,6 +302,16 @@
     // Set initial active chip
     document.querySelectorAll('.chip[data-period]').forEach(b => b.classList.toggle('is-active', b.dataset.period === initialPeriod));
 
+    function renderDataSource(data) {
+      const el = document.getElementById('dataSource');
+      if (!el) return;
+      const src = data && data.source;
+      if (src === 'brapi') el.textContent = 'Fonte: Brapi.dev';
+      else if (src === 'yahoo') el.textContent = 'Fonte: Yahoo Finance';
+      else el.textContent = '';
+      if (data && data.cache === 'stale') el.textContent += ' (cache antigo — provedor pode estar sob carga)';
+    }
+
     // ===== Live quote (derived from /data response) =====
     function renderQuoteFromData(data) {
       const meta = data && data.meta;
@@ -458,9 +469,10 @@
         }
         const data = await res.json();
         currentData = data;
-        plausible('ticker_view', { ticker: tickerDisplay, period });
+        plausible('ticker_view', { ticker: tickerDisplay, period, source: data.source });
 
         renderQuoteFromData(data);
+        renderDataSource(data);
 
         const labels = data.dates.map(d => new Date(d).toLocaleDateString('pt-BR'));
         renderPriceChart(data, labels);

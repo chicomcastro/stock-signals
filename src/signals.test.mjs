@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import sig from "./signals.js";
-const { extractDailySignals, aggregateSignals, isWithinDays, DEFAULT_UNIVERSE } = sig;
+const { extractDailySignals, aggregateSignals, isWithinDays, DEFAULT_UNIVERSE, GLOBAL_UNIVERSE } = sig;
 
 function mkAnalysis(rows) {
   return {
@@ -112,12 +112,21 @@ describe("aggregateSignals", () => {
   });
 });
 
-describe("DEFAULT_UNIVERSE", () => {
-  it("contains a healthy mix of asset classes", () => {
+describe("DEFAULT_UNIVERSE (B3 only)", () => {
+  it("contains only B3-compatible tickers (no Yahoo dependency)", () => {
     expect(DEFAULT_UNIVERSE).toContain("PETR4");
-    expect(DEFAULT_UNIVERSE).toContain("AAPL");
-    expect(DEFAULT_UNIVERSE).toContain("BTC-USD");
-    expect(DEFAULT_UNIVERSE).toContain("USDBRL=X");
+    expect(DEFAULT_UNIVERSE).toContain("VALE3");
+    expect(DEFAULT_UNIVERSE).toContain("AAPL34"); // BDR is fine — Brapi has it
+    expect(DEFAULT_UNIVERSE).not.toContain("AAPL"); // US stock — moved to GLOBAL
+    expect(DEFAULT_UNIVERSE).not.toContain("BTC-USD"); // crypto — moved to GLOBAL
     expect(DEFAULT_UNIVERSE.length).toBeGreaterThan(20);
+  });
+});
+
+describe("GLOBAL_UNIVERSE", () => {
+  it("contains non-B3 tickers", () => {
+    expect(GLOBAL_UNIVERSE).toContain("AAPL");
+    expect(GLOBAL_UNIVERSE).toContain("BTC-USD");
+    expect(GLOBAL_UNIVERSE).toContain("USDBRL=X");
   });
 });
