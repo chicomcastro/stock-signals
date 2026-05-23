@@ -19,9 +19,9 @@ function extractDailySignals(analysis, dates, recencyDays = 3, referenceDate = n
       out.push({ date: d, type: "death", message: a.cross.message });
     }
 
-    if (a.macd && a.macd.message && /cruzou acima da linha de sinal/.test(a.macd.message)) {
+    if (a.macd && a.macd.message && /cruzou acima da linha de sinal/i.test(a.macd.message)) {
       out.push({ date: d, type: "bullish_cross", message: a.macd.message });
-    } else if (a.macd && a.macd.message && /cruzou abaixo da linha de sinal/.test(a.macd.message)) {
+    } else if (a.macd && a.macd.message && /cruzou abaixo da linha de sinal/i.test(a.macd.message)) {
       out.push({ date: d, type: "bearish_cross", message: a.macd.message });
     }
 

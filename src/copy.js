@@ -45,24 +45,24 @@ const FRIENDLY = {
   },
   indicators: {
     price_vs_ma200: {
-      title: "Preço vs média de 200 dias",
+      title: "Preço × média de 1 ano (MA200)",
       explain:
-        "A MA200 é o termômetro de longo prazo. Acima dela, a tendência geral é de alta; abaixo, de baixa.",
+        "A MA200 é o preço médio dos últimos 200 pregões (≈1 ano). Preço acima dela = mercado paga mais que a média do ano (bull market). Abaixo = paga menos (bear market). Fundos e algoritmos usam essa linha como gatilho — vira profecia auto-realizada.",
     },
     rsi: {
       title: "RSI (Força do movimento)",
       explain:
-        "Mede quão forte é a alta ou a baixa recente. Acima de 70 = pode estar 'esticado' demais para cima. Abaixo de 30 = pode ter caído demais.",
+        "Mede o ritmo da subida vs descida nos últimos 14 pregões (0 a 100). Acima de 70: subiu rápido demais, pode pausar. Abaixo de 30: caiu demais, pode reagir. Em tendências fortes, fica fora dessa faixa por semanas — não é gatilho automático.",
     },
     macd: {
       title: "MACD (Momentum)",
       explain:
-        "Compara duas médias de curto prazo para mostrar se o preço está acelerando ou desacelerando. Quando a linha do MACD cruza a linha de sinal, costuma marcar uma virada.",
+        "Detecta quando o preço muda de marcha. Linha do MACD cruzando acima da linha de sinal = acelerando para cima. Cruzando abaixo = acelerando para baixo. O histograma mostra a força da tendência atual.",
     },
     cross: {
-      title: "Cruzamento das médias 50 × 200",
+      title: "Cruzamento das médias (MA50 × MA200)",
       explain:
-        "Quando a média de 50 dias cruza acima da de 200, o mercado costuma encarar como início de tendência de alta (Golden Cross). O oposto é o Death Cross.",
+        "Golden Cross: a MA50 cruza acima da MA200 — início clássico de tendência de alta, costuma durar meses. Death Cross: o oposto. Sinais lentos — só aparecem quando a tendência já se estabeleceu.",
     },
   },
   periods: {
