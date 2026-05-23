@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import dp from "./dataProvider.js";
 
 const stub = {
@@ -351,12 +351,98 @@ describe("getHistoricalAnalysisBatch", () => {
   });
 });
 
-// Note: Persistent cache integration testing requires the same module instance
-// loaded by both the test and dataProvider.js. Because Vitest uses ESM `import`
-// for `.mjs` test files while dataProvider.js uses CJS `require`, they get
-// different module instances. The persistent store is unit-tested in
-// persistentStore.test.mjs against its public API; its wiring into
-// dataProvider.js is exercised on real network calls in production.
+import { createRequire } from "module";
+const requireCjs = createRequire(import.meta.url);
+const persistentStore = requireCjs("./persistentStore.js");
+
+describe("Persistent cache integration (via createRequire)", () => {
+  const URL_ENV = "UPSTASH_REDIS_REST_URL";
+  const TOKEN_ENV = "UPSTASH_REDIS_REST_TOKEN";
+  let originalUrl;
+  let originalToken;
+
+  beforeEach(() => {
+    originalUrl = process.env[URL_ENV];
+    originalToken = process.env[TOKEN_ENV];
+    delete process.env[URL_ENV];
+    delete process.env[TOKEN_ENV];
+    persistentStore.setFetchImpl(null);
+    dp.historicalCache.clear();
+    dp.errorCache.clear();
+    stub.chart.mockReset();
+  });
+
+  afterEach(() => {
+    if (originalUrl != null) process.env[URL_ENV] = originalUrl;
+    else delete process.env[URL_ENV];
+    if (originalToken != null) process.env[TOKEN_ENV] = originalToken;
+    else delete process.env[TOKEN_ENV];
+    persistentStore.setFetchImpl(null);
+  });
+
+  it("serves from persistent cache when in-memory is empty", async () => {
+    process.env[URL_ENV] = "https://fake.upstash.io";
+    process.env[TOKEN_ENV] = "fake-token";
+
+    const fakeSnapshot = {
+      ticker: "WEGE3.SA",
+      period: "3M",
+      dates: [new Date("2025-01-01").toISOString()],
+      closePrices: [40],
+      analysis: [{
+        price: { signal: "entry", message: "ok", value: 40 },
+        rsi: { signal: "neutral", message: "n", value: 50 },
+        macd: { signal: "neutral", message: "n", value: 0 },
+        cross: { signal: "neutral", message: "n" },
+      }],
+    };
+    persistentStore.setFetchImpl(vi.fn(async () => ({
+      ok: true, status: 200,
+      json: async () => ({ result: JSON.stringify(fakeSnapshot) }),
+    })));
+
+    const data = await dp.getHistoricalAnalysis("WEGE3.SA", "3M");
+    expect(data.cache).toBe("persistent");
+    expect(data.ticker).toBe("WEGE3.SA");
+    expect(stub.chart).not.toHaveBeenCalled();
+  });
+
+  it("populates persistent cache on miss (fire-and-forget)", async () => {
+    process.env[URL_ENV] = "https://fake.upstash.io";
+    process.env[TOKEN_ENV] = "fake-token";
+
+    const fetchSpy = vi.fn(async (url, opts) => {
+      const body = opts ? JSON.parse(opts.body) : [];
+      if (body[0] === "GET") return { ok: true, status: 200, json: async () => ({ result: null }) };
+      return { ok: true, status: 200, json: async () => ({}) };
+    });
+    persistentStore.setFetchImpl(fetchSpy);
+    stub.chart.mockResolvedValue(makeChartReturn(50));
+
+    await dp.getHistoricalAnalysis("VALE3.SA", "3M");
+    // Wait for fire-and-forget to settle
+    await new Promise((r) => setTimeout(r, 50));
+
+    const setCall = fetchSpy.mock.calls.find((c) => {
+      const body = JSON.parse(c[1].body);
+      return body[0] === "SET";
+    });
+    expect(setCall).toBeDefined();
+  });
+
+  it("falls through to API when persistent cache returns null", async () => {
+    process.env[URL_ENV] = "https://fake.upstash.io";
+    process.env[TOKEN_ENV] = "fake-token";
+    persistentStore.setFetchImpl(vi.fn(async () => ({
+      ok: true, status: 200, json: async () => ({ result: null }),
+    })));
+    stub.chart.mockResolvedValue(makeChartReturn(50));
+
+    const data = await dp.getHistoricalAnalysis("ABEV3.SA", "3M");
+    expect(data.cache).toBe("miss");
+    expect(stub.chart).toHaveBeenCalled();
+  });
+});
 
 describe("getQuote with stale-on-error", () => {
   it("returns stale cache when Yahoo errors", async () => {

@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import ps from "./persistentStore.js";
+import { createRequire } from "module";
+
+// Use createRequire so we exercise the same CJS instance that dataProvider.js
+// loads — important for v8 coverage attribution.
+const requireCjs = createRequire(import.meta.url);
+const ps = requireCjs("./persistentStore.js");
 const { get, set, del, isEnabled, setFetchImpl } = ps;
 
 const URL_ENV = "UPSTASH_REDIS_REST_URL";
