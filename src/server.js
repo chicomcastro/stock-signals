@@ -4,7 +4,7 @@ const fs = require("fs");
 const rateLimit = require("express-rate-limit");
 
 const { normalizeTicker, displayTicker, isValidTickerInput } = require("./ticker");
-const { getHistoricalAnalysis, getQuote, searchTickers } = require("./dataProvider");
+const { getHistoricalAnalysis, getHistoricalAnalysisBatch, getQuote, searchTickers } = require("./dataProvider");
 const { tickerOgSvg, defaultOgSvg } = require("./og");
 const { backtestAllForTicker } = require("./backtest");
 const { extractDailySignals, aggregateSignals, DEFAULT_UNIVERSE } = require("./signals");
@@ -184,35 +184,19 @@ function createApp({ subscriberStore } = {}) {
       const period = "6M";
       const tickers = universe.slice(0, limit);
       const referenceDate = new Date();
-      const concurrency = Math.max(1, Math.min(Number(process.env.SIGNALS_CONCURRENCY || 3), 8));
+      const normalizedTickers = tickers.map(normalizeTicker);
+
+      // 1 batched call to Brapi for B3 + serialized Yahoo calls for the rest
+      const results = await getHistoricalAnalysisBatch(normalizedTickers, period);
 
       const ok = [];
-      let stopped = false;
-      let consecutiveRateLimits = 0;
-
-      async function processTicker(t) {
-        if (stopped) return;
+      for (const [normalized, data] of results.entries()) {
         try {
-          const normalized = normalizeTicker(t);
-          const data = await getHistoricalAnalysis(normalized, period);
-          consecutiveRateLimits = 0;
           const signals = extractDailySignals(data.analysis, data.dates, 5, referenceDate);
           if (signals.length > 0) {
             ok.push({ ticker: displayTicker(normalized), normalized, signals });
           }
-        } catch (err) {
-          if (err.status === 429) {
-            consecutiveRateLimits++;
-            if (consecutiveRateLimits >= 3) stopped = true;
-          }
-        }
-      }
-
-      let i = 0;
-      while (i < tickers.length && !stopped) {
-        const batch = tickers.slice(i, i + concurrency);
-        await Promise.all(batch.map(processTicker));
-        i += concurrency;
+        } catch (_) {}
       }
 
       const buckets = aggregateSignals(ok);
@@ -220,9 +204,9 @@ function createApp({ subscriberStore } = {}) {
       res.json({
         date: referenceDate.toISOString().slice(0, 10),
         universeSize: tickers.length,
-        processed: Math.min(i, tickers.length),
+        processed: results.size,
         withSignals: ok.length,
-        rateLimited: stopped,
+        rateLimited: results.size < tickers.length,
         buckets,
       });
     } catch (error) {

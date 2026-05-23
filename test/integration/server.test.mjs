@@ -22,6 +22,7 @@ let app;
 let subscriberStore;
 beforeAll(() => {
   dp.setYahooClient(stub);
+  dp.setBrapiClient({}); // disable Brapi path for these tests
   subscriberStore = subs.createSubscriberStore({
     storePath: path.join(os.tmpdir(), `subs-test-${Date.now()}.json`),
   });

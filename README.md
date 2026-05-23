@@ -21,7 +21,7 @@ Análise técnica gratuita para ações da B3, BDRs, ETFs, criptomoedas e câmbi
 
 ## Stack
 
-- **Backend**: Node.js 18+, Express, [yahoo-finance2](https://github.com/gadicc/node-yahoo-finance2), [technicalindicators](https://github.com/anandanand84/technicalindicators), [express-rate-limit](https://github.com/express-rate-limit/express-rate-limit).
+- **Backend**: Node.js 18+, Express, [Brapi](https://brapi.dev) (B3) + [yahoo-finance2](https://github.com/gadicc/node-yahoo-finance2) (US/cripto/FX) com fallback automático, [technicalindicators](https://github.com/anandanand84/technicalindicators), [express-rate-limit](https://github.com/express-rate-limit/express-rate-limit).
 - **Frontend**: HTML estático + Chart.js 4.
 - **Testes**: [Vitest](https://vitest.dev/).
 - **Deploy**: Vercel.
@@ -68,10 +68,16 @@ O workflow `.github/workflows/ci.yml` roda em cada PR e push para `main`:
 
 ## Variáveis de ambiente
 
-| Variável            | Default | Descrição                                              |
-| ------------------- | ------- | ------------------------------------------------------ |
-| `PORT`              | `3000`  | Porta do servidor local.                               |
-| `PUBLIC_BASE_URL`   | inferido | URL pública usada para canonical, OG e sitemap.       |
+| Variável            | Default                   | Descrição                                                                                 |
+| ------------------- | ------------------------- | ----------------------------------------------------------------------------------------- |
+| `PORT`              | `3000`                    | Porta do servidor local.                                                                  |
+| `PUBLIC_BASE_URL`   | inferido                  | URL pública usada para canonical, OG e sitemap.                                           |
+| `BRAPI_TOKEN`       | (opcional)                | Token gratuito do [brapi.dev](https://brapi.dev/dashboard). Aumenta quota para B3.        |
+| `BRAPI_BASE`        | `https://brapi.dev/api`   | URL base do Brapi (sobreescrita útil em testes).                                          |
+| `PREFER_BRAPI`      | `1`                       | `0` desativa o Brapi como provider primário para B3 (volta a usar só Yahoo).              |
+| `MOCK_YAHOO`        | (vazio)                   | `1` usa fixture determinística — sem chamadas externas. Para CI/E2E.                      |
+| `SIGNALS_CONCURRENCY` | `3`                     | Paralelismo do fallback non-batch para `/api/signals`.                                    |
+| `RATE_LIMIT_MAX`    | `60` (prod) / `10000` (test) | Limite por IP/minuto nas rotas de API.                                                |
 
 ## Como funciona o framework
 
