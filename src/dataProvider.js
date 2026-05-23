@@ -4,6 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const { createCache, ttlForNow } = require("./cache");
 const { computeIndicators, findMaCrossPoints, findMacdSignalCrossPoints, analyzeIndicators } = require("./indicators");
+const brapi = require("./providers/brapi");
 
 if (typeof yahooFinance.suppressNotices === "function") {
   yahooFinance.suppressNotices(["yahooSurvey", "ripHistorical"]);
@@ -17,6 +18,14 @@ function getYahooClient() {
   return yahooFinance;
 }
 
+let brapiClient = brapi;
+function setBrapiClient(client) {
+  brapiClient = client;
+}
+function getBrapiClient() {
+  return brapiClient;
+}
+
 const historicalCache = createCache({ ttlMs: 15 * 60 * 1000 });
 const quoteCache = createCache({ ttlMs: 5 * 60 * 1000 });
 const searchCache = createCache({ ttlMs: 24 * 60 * 60 * 1000 });
@@ -24,6 +33,7 @@ const errorCache = createCache({ ttlMs: 60 * 1000 });
 const inFlight = new Map();
 
 const USE_MOCK = process.env.MOCK_YAHOO === "1";
+const PREFER_BRAPI = process.env.PREFER_BRAPI !== "0";
 let mockFixture = null;
 function loadMockFixture() {
   if (mockFixture) return mockFixture;
@@ -33,20 +43,21 @@ function loadMockFixture() {
 }
 
 function classifyError(err) {
+  if (err && (err.status === 429 || err.status === 502 || err.status === 404)) return err;
   const msg = String(err && err.message ? err.message : err);
-  if (/Too Many Requests|429|rate limit/i.test(msg)) {
-    const e = new Error("Limite de requisições do Yahoo Finance atingido. Tente novamente em 1-2 minutos.");
+  if (/Too Many Requests|429|rate limit|limite de requisições/i.test(msg)) {
+    const e = new Error("Limite de requisições atingido. Tente novamente em 1-2 minutos.");
     e.status = 429;
     e.retryable = true;
     return e;
   }
-  if (/Not Found|404|No data|HTTP 404|symbol may be delisted/i.test(msg)) {
+  if (/Not Found|404|No data|HTTP 404|symbol may be delisted|inexistente/i.test(msg)) {
     const e = new Error("Ativo não encontrado");
     e.status = 404;
     return e;
   }
   if (/Unexpected token|JSON/i.test(msg)) {
-    const e = new Error("Yahoo Finance retornou uma resposta inesperada. Tente novamente em alguns instantes.");
+    const e = new Error("O provedor de dados retornou uma resposta inesperada. Tente novamente em alguns instantes.");
     e.status = 502;
     e.retryable = true;
     return e;
@@ -138,36 +149,45 @@ function buildMockHistorical() {
   };
 }
 
-async function fetchYahooChart(ticker, period) {
-  if (USE_MOCK) return buildMockHistorical();
-
-  const { period1 } = getDateRange(period, true);
-  return retry(async () => {
-    const chart = await yahooFinance.chart(ticker, {
-      period1,
-      interval: "1d",
-      includePrePost: false,
-    });
-    return chart || { quotes: [], meta: {} };
-  });
+function shouldUseBrapi(normalizedTicker) {
+  if (!PREFER_BRAPI) return false;
+  return brapiClient && brapiClient.isB3Ticker && brapiClient.isB3Ticker(normalizedTicker);
 }
 
-function deriveQuoteSummary(normalizedTicker, meta, quotes) {
-  const last = quotes && quotes.length > 0 ? quotes[quotes.length - 1] : null;
-  const prev = quotes && quotes.length > 1 ? quotes[quotes.length - 2] : null;
-  const lastClose = last && last.close != null ? last.close : null;
-  const prevClose = prev && prev.close != null ? prev.close : null;
-  const derivedChange = lastClose != null && prevClose != null && prevClose !== 0
-    ? ((lastClose - prevClose) / prevClose) * 100
-    : null;
+async function fetchYahooChartRaw(ticker, period) {
+  const { period1 } = getDateRange(period, true);
+  const chart = await yahooFinance.chart(ticker, {
+    period1,
+    interval: "1d",
+    includePrePost: false,
+  });
+  return chart || { quotes: [], meta: {} };
+}
 
-  return {
-    symbol: (meta && meta.symbol) || normalizedTicker,
-    shortName: (meta && (meta.shortName || meta.longName)) || normalizedTicker,
-    regularMarketPrice: (meta && meta.regularMarketPrice != null) ? meta.regularMarketPrice : lastClose,
-    regularMarketChangePercent: (meta && meta.regularMarketChangePercent != null) ? meta.regularMarketChangePercent : derivedChange,
-    currency: (meta && meta.currency) || null,
-  };
+async function fetchBrapiChartRaw(ticker, period) {
+  return brapiClient.chart(ticker, { period });
+}
+
+async function fetchChart(ticker, period) {
+  if (USE_MOCK) return buildMockHistorical();
+
+  if (shouldUseBrapi(ticker)) {
+    try {
+      return await retry(() => fetchBrapiChartRaw(ticker, period));
+    } catch (err) {
+      const classified = classifyError(err);
+      // For 401/403 (bad token) or transient failures, fall back to Yahoo silently
+      if (classified.status === 401 || classified.status === 403 || classified.status === 502) {
+        try {
+          return await retry(() => fetchYahooChartRaw(ticker, period));
+        } catch (yErr) {
+          throw classifyError(yErr);
+        }
+      }
+      throw classified;
+    }
+  }
+  return retry(() => fetchYahooChartRaw(ticker, period));
 }
 
 async function getHistoricalAnalysis(normalizedTicker, period) {
@@ -189,7 +209,7 @@ async function getHistoricalAnalysis(normalizedTicker, period) {
 async function loadHistoricalAnalysis(normalizedTicker, period, cacheKey, errKey) {
   let raw;
   try {
-    raw = await fetchYahooChart(normalizedTicker, period);
+    raw = await fetchChart(normalizedTicker, period);
   } catch (err) {
     const classified = classifyError(err);
     if (classified.retryable || classified.status === 429 || classified.status === 502) {
@@ -200,6 +220,10 @@ async function loadHistoricalAnalysis(normalizedTicker, period, cacheKey, errKey
     throw classified;
   }
 
+  return buildAnalysisFromRaw(normalizedTicker, period, raw, cacheKey);
+}
+
+function buildAnalysisFromRaw(normalizedTicker, period, raw, cacheKey) {
   const quotes = (raw.quotes || []).filter((q) => q && q.date && q.close != null);
   if (quotes.length === 0) {
     const err = new Error("Ativo não encontrado ou sem dados");
@@ -249,11 +273,90 @@ async function loadHistoricalAnalysis(normalizedTicker, period, cacheKey, errKey
     crossPoints,
     macdCrossPoints,
     meta: raw.meta || null,
+    source: shouldUseBrapi(normalizedTicker) ? "brapi" : "yahoo",
   };
   responseData.analysis = dates.map((_, i) => analyzeIndicators(responseData, i));
 
-  historicalCache.set(cacheKey, responseData, ttlForNow());
-  return { ...responseData, cache: "miss" };
+  if (cacheKey) historicalCache.set(cacheKey, responseData, ttlForNow());
+  return cacheKey ? { ...responseData, cache: "miss" } : responseData;
+}
+
+function deriveQuoteSummary(normalizedTicker, meta, quotes) {
+  const last = quotes && quotes.length > 0 ? quotes[quotes.length - 1] : null;
+  const prev = quotes && quotes.length > 1 ? quotes[quotes.length - 2] : null;
+  const lastClose = last && last.close != null ? last.close : null;
+  const prevClose = prev && prev.close != null ? prev.close : null;
+  const derivedChange = lastClose != null && prevClose != null && prevClose !== 0
+    ? ((lastClose - prevClose) / prevClose) * 100
+    : null;
+
+  return {
+    symbol: (meta && meta.symbol) || normalizedTicker,
+    shortName: (meta && (meta.shortName || meta.longName)) || normalizedTicker,
+    regularMarketPrice: (meta && meta.regularMarketPrice != null) ? meta.regularMarketPrice : lastClose,
+    regularMarketChangePercent: (meta && meta.regularMarketChangePercent != null) ? meta.regularMarketChangePercent : derivedChange,
+    currency: (meta && meta.currency) || null,
+  };
+}
+
+async function getHistoricalAnalysisBatch(normalizedTickers, period) {
+  const results = new Map();
+  const missing = [];
+
+  for (const t of normalizedTickers) {
+    const key = `hist|${t}|${period}`;
+    const cached = historicalCache.get(key);
+    if (cached) results.set(t, { ...cached, cache: "hit" });
+    else missing.push(t);
+  }
+
+  if (missing.length === 0) return results;
+
+  if (USE_MOCK) {
+    for (const t of missing) {
+      try {
+        const raw = buildMockHistorical();
+        const built = buildAnalysisFromRaw(t, period, raw, `hist|${t}|${period}`);
+        results.set(t, built);
+      } catch (_) {}
+    }
+    return results;
+  }
+
+  const brapiTickers = PREFER_BRAPI ? missing.filter(shouldUseBrapi) : [];
+  const otherTickers = missing.filter((t) => !brapiTickers.includes(t));
+
+  if (brapiTickers.length > 0 && brapiClient.chartBatch) {
+    try {
+      const batched = await retry(() => brapiClient.chartBatch(brapiTickers, { period }));
+      const seen = new Set();
+      for (const item of batched) {
+        const found = brapiTickers.find((t) => t === item.symbol || t.replace(/\.SA$/, "") === item.symbol);
+        if (!found) continue;
+        seen.add(found);
+        try {
+          const built = buildAnalysisFromRaw(found, period, item.chart, `hist|${found}|${period}`);
+          results.set(found, built);
+        } catch (_) {}
+      }
+      // Anything brapi didn't return → fall through to Yahoo
+      for (const t of brapiTickers) {
+        if (!seen.has(t)) otherTickers.push(t);
+      }
+    } catch (_) {
+      // Brapi batch failed entirely — fall back to Yahoo for all
+      for (const t of brapiTickers) otherTickers.push(t);
+    }
+  }
+
+  for (const t of otherTickers) {
+    try {
+      const data = await getHistoricalAnalysis(t, period);
+      results.set(t, data);
+    } catch (_) {}
+  }
+
+  return results;
 }
 
 async function getQuote(normalizedTicker) {
@@ -282,7 +385,18 @@ async function loadQuote(normalizedTicker, key, errKey) {
 
   let quote;
   try {
-    quote = await retry(() => yahooFinance.quote(normalizedTicker));
+    if (shouldUseBrapi(normalizedTicker)) {
+      quote = await retry(() => brapiClient.quote(normalizedTicker));
+    } else {
+      const raw = await retry(() => yahooFinance.quote(normalizedTicker));
+      quote = {
+        symbol: raw.symbol,
+        shortName: raw.shortName ?? raw.longName ?? raw.symbol,
+        regularMarketPrice: raw.regularMarketPrice ?? null,
+        regularMarketChangePercent: raw.regularMarketChangePercent ?? null,
+        currency: raw.currency ?? null,
+      };
+    }
   } catch (err) {
     const classified = classifyError(err);
     if (classified.retryable || classified.status === 429 || classified.status === 502) {
@@ -292,15 +406,8 @@ async function loadQuote(normalizedTicker, key, errKey) {
     }
     throw classified;
   }
-  const summary = {
-    symbol: quote.symbol,
-    shortName: quote.shortName ?? quote.longName ?? quote.symbol,
-    regularMarketPrice: quote.regularMarketPrice ?? null,
-    regularMarketChangePercent: quote.regularMarketChangePercent ?? null,
-    currency: quote.currency ?? null,
-  };
-  quoteCache.set(key, summary);
-  return summary;
+  quoteCache.set(key, quote);
+  return quote;
 }
 
 async function searchTickers(query) {
@@ -334,6 +441,7 @@ async function searchTickers(query) {
 
 module.exports = {
   getHistoricalAnalysis,
+  getHistoricalAnalysisBatch,
   getQuote,
   searchTickers,
   getDateRange,
@@ -341,6 +449,9 @@ module.exports = {
   retry,
   setYahooClient,
   getYahooClient,
+  setBrapiClient,
+  getBrapiClient,
+  shouldUseBrapi,
   historicalCache,
   quoteCache,
   searchCache,

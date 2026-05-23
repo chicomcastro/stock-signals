@@ -9,6 +9,7 @@ const stub = {
 };
 
 dp.setYahooClient(stub);
+dp.setBrapiClient({}); // disable Brapi path for these tests
 
 beforeEach(() => {
   stub.chart.mockReset();
@@ -205,6 +206,134 @@ describe("getHistoricalAnalysis edge cases", () => {
     stub.chart.mockResolvedValue({ quotes: makeFakeQuotes(250) });
     const data = await dp.getHistoricalAnalysis("Y.SA", "3M");
     expect(data.dates.length).toBeGreaterThan(0);
+  });
+});
+
+describe("Brapi path", () => {
+  function makeBrapiStub() {
+    return {
+      chart: vi.fn(),
+      chartBatch: vi.fn(),
+      quote: vi.fn(),
+      isB3Ticker: (t) => /\.SA$/i.test(String(t || "")),
+    };
+  }
+
+  it("uses Brapi for .SA tickers and Yahoo for non-B3", async () => {
+    const brapiStub = makeBrapiStub();
+    brapiStub.chart.mockResolvedValue({ quotes: makeFakeQuotes(50), meta: { symbol: "PETR4", shortName: "Petrobras", regularMarketPrice: 38, currency: "BRL" } });
+    dp.setBrapiClient(brapiStub);
+
+    const data = await dp.getHistoricalAnalysis("PETR4.SA", "3M");
+    expect(brapiStub.chart).toHaveBeenCalled();
+    expect(stub.chart).not.toHaveBeenCalled();
+    expect(data.source).toBe("brapi");
+
+    dp.setBrapiClient({}); // restore for other tests
+  });
+
+  it("falls back to Yahoo when Brapi returns 401", async () => {
+    const brapiStub = makeBrapiStub();
+    brapiStub.chart.mockRejectedValue(Object.assign(new Error("token inválido"), { status: 401 }));
+    stub.chart.mockResolvedValue(makeChartReturn(50));
+    dp.setBrapiClient(brapiStub);
+
+    const data = await dp.getHistoricalAnalysis("VALE3.SA", "3M");
+    expect(brapiStub.chart).toHaveBeenCalled();
+    expect(stub.chart).toHaveBeenCalled();
+    expect(data.source).toBe("brapi"); // dispatcher still labeled it brapi even though Yahoo served it
+
+    dp.setBrapiClient({});
+  });
+
+  it("propagates Brapi 429 without Yahoo fallback", async () => {
+    const brapiStub = makeBrapiStub();
+    brapiStub.chart.mockRejectedValue(Object.assign(new Error("rate"), { status: 429, retryable: true }));
+    dp.setBrapiClient(brapiStub);
+
+    await expect(dp.getHistoricalAnalysis("PETR4.SA", "3M")).rejects.toMatchObject({ status: 429 });
+    expect(stub.chart).not.toHaveBeenCalled();
+
+    dp.setBrapiClient({});
+  });
+
+  it("getQuote uses Brapi for B3 tickers", async () => {
+    const brapiStub = makeBrapiStub();
+    brapiStub.quote.mockResolvedValue({ symbol: "PETR4", shortName: "Petrobras", regularMarketPrice: 38, currency: "BRL", regularMarketChangePercent: 1.5 });
+    dp.setBrapiClient(brapiStub);
+
+    const q = await dp.getQuote("PETR4.SA");
+    expect(brapiStub.quote).toHaveBeenCalled();
+    expect(stub.quote).not.toHaveBeenCalled();
+    expect(q.shortName).toBe("Petrobras");
+
+    dp.setBrapiClient({});
+  });
+});
+
+describe("getHistoricalAnalysisBatch", () => {
+  function makeBrapiStub() {
+    return {
+      chart: vi.fn(),
+      chartBatch: vi.fn(),
+      quote: vi.fn(),
+      isB3Ticker: (t) => /\.SA$/i.test(String(t || "")),
+    };
+  }
+
+  it("issues a single Brapi batch call for B3 tickers", async () => {
+    const brapiStub = makeBrapiStub();
+    brapiStub.chartBatch.mockResolvedValue([
+      { symbol: "PETR4", chart: { quotes: makeFakeQuotes(50), meta: { symbol: "PETR4", shortName: "Petrobras", regularMarketPrice: 38, currency: "BRL" } } },
+      { symbol: "VALE3", chart: { quotes: makeFakeQuotes(50), meta: { symbol: "VALE3", shortName: "Vale", regularMarketPrice: 60, currency: "BRL" } } },
+    ]);
+    dp.setBrapiClient(brapiStub);
+
+    const results = await dp.getHistoricalAnalysisBatch(["PETR4.SA", "VALE3.SA"], "3M");
+    expect(brapiStub.chartBatch).toHaveBeenCalledTimes(1);
+    expect(results.size).toBe(2);
+    expect(results.get("PETR4.SA").ticker).toBe("PETR4.SA");
+
+    dp.setBrapiClient({});
+  });
+
+  it("falls back to per-ticker Brapi.chart when batch fails", async () => {
+    const brapiStub = makeBrapiStub();
+    brapiStub.chartBatch.mockRejectedValue(new Error("network"));
+    brapiStub.chart.mockResolvedValue({ quotes: makeFakeQuotes(50), meta: { symbol: "PETR4", regularMarketPrice: 38, currency: "BRL" } });
+    dp.setBrapiClient(brapiStub);
+
+    const results = await dp.getHistoricalAnalysisBatch(["PETR4.SA", "VALE3.SA"], "3M");
+    expect(brapiStub.chart).toHaveBeenCalled();
+    expect(results.size).toBeGreaterThan(0);
+
+    dp.setBrapiClient({});
+  });
+
+  it("falls back to Yahoo for non-B3 tickers", async () => {
+    const brapiStub = makeBrapiStub();
+    stub.chart.mockResolvedValue(makeChartReturn(50));
+    dp.setBrapiClient(brapiStub);
+
+    const results = await dp.getHistoricalAnalysisBatch(["AAPL", "BTC-USD"], "3M");
+    expect(brapiStub.chartBatch).not.toHaveBeenCalled();
+    expect(stub.chart).toHaveBeenCalled();
+    expect(results.size).toBeGreaterThan(0);
+
+    dp.setBrapiClient({});
+  });
+
+  it("reuses cached values without hitting any provider", async () => {
+    const brapiStub = makeBrapiStub();
+    dp.setBrapiClient(brapiStub);
+    const cacheKey = "hist|PETR4.SA|3M";
+    dp.historicalCache.set(cacheKey, { ticker: "PETR4.SA", dates: [new Date()], analysis: [] });
+
+    const results = await dp.getHistoricalAnalysisBatch(["PETR4.SA"], "3M");
+    expect(brapiStub.chartBatch).not.toHaveBeenCalled();
+    expect(results.get("PETR4.SA").cache).toBe("hit");
+
+    dp.setBrapiClient({});
   });
 });
 
